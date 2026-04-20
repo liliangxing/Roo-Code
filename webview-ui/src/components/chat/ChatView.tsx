@@ -1426,7 +1426,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		const nextCheckpointIndex = checkpointIndices[nextCursor]
 		checkpointJumpCursorRef.current = nextCursor
 
-		enterUserBrowsingHistory("keyboard-nav-up")
+		enterUserBrowsingHistory("checkpoint-nav")
 		virtuosoRef.current?.scrollToIndex({
 			index: nextCheckpointIndex,
 			align: "center",
@@ -1687,7 +1687,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 									<StandardTooltip content={t("chat:scrollToBottom")}>
 										<Button
 											variant="secondary"
-											className={hasLatestCheckpoint ? "flex-1 mr-[6px]" : "flex-[2]"}
+											className={hasLatestCheckpoint ? "flex-1 mr-1.5" : "flex-[2]"}
 											onClick={handleScrollToBottomAndResetCheckpointCursor}>
 											<span className="codicon codicon-chevron-down"></span>
 										</Button>
@@ -1696,7 +1696,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 										<StandardTooltip content={t("chat:scrollToLatestCheckpoint")}>
 											<Button
 												variant="secondary"
-												className="flex-1 ml-[6px]"
+												className="flex-1 ml-1.5"
 												onClick={handleScrollToLatestCheckpoint}
 												aria-label={t("chat:scrollToLatestCheckpoint")}>
 												<span className="codicon codicon-history"></span>

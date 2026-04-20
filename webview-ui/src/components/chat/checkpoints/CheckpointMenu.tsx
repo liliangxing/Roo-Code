@@ -172,16 +172,18 @@ export const CheckpointMenu = ({
 					</div>
 				</PopoverContent>
 			</Popover>
-			<StandardTooltip content={t("chat:scrollToLatestCheckpoint")}>
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={onJumpToPreviousCheckpoint}
-					data-testid="jump-previous-checkpoint-btn"
-					aria-label={t("chat:scrollToLatestCheckpoint")}>
-					<span className="codicon codicon-chevron-up" />
-				</Button>
-			</StandardTooltip>
+			{onJumpToPreviousCheckpoint && (
+				<StandardTooltip content={t("chat:scrollToLatestCheckpoint")}>
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={onJumpToPreviousCheckpoint}
+						data-testid="jump-previous-checkpoint-btn"
+						aria-label={t("chat:scrollToLatestCheckpoint")}>
+						<span className="codicon codicon-chevron-up" />
+					</Button>
+				</StandardTooltip>
+			)}
 			<Popover open={moreOpen} onOpenChange={(open) => setMoreOpen(open)} data-testid="more-popover">
 				<StandardTooltip content={t("chat:task.seeMore")}>
 					<PopoverTrigger asChild>
