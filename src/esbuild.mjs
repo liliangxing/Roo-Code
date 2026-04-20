@@ -10,24 +10,6 @@ import { copyPaths, copyWasms, copyLocales, setupLocaleWatcher } from "@roo-code
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-async function removeDirWithRetries(dirPath, retries = 5, retryDelayMs = 200) {
-	for (let attempt = 0; attempt <= retries; attempt++) {
-		try {
-			await fs.promises.rm(dirPath, { recursive: true, force: true })
-			return
-		} catch (error) {
-			const isRetryable = error?.code === "ENOTEMPTY" || error?.code === "EBUSY" || error?.code === "EPERM"
-			const isLastAttempt = attempt === retries
-
-			if (!isRetryable || isLastAttempt) {
-				throw error
-			}
-
-			await new Promise((resolve) => globalThis.setTimeout(resolve, retryDelayMs * (attempt + 1)))
-		}
-	}
-}
-
 async function main() {
 	const name = "extension"
 	const production = process.argv.includes("--production")
@@ -54,7 +36,7 @@ async function main() {
 
 	if (fs.existsSync(distDir)) {
 		console.log(`[${name}] Cleaning dist directory: ${distDir}`)
-		await removeDirWithRetries(distDir)
+		fs.rmSync(distDir, { recursive: true, force: true })
 	}
 
 	/**
