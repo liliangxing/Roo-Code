@@ -1176,10 +1176,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 
 	private supportsAwsPromptCache(modelConfig: { id: BedrockModelId | string; info: ModelInfo }): boolean | undefined {
 		// Check if the model supports prompt cache
-		// The cachableFields property is not part of the ModelInfo type in schemas
-		// but it's used in the bedrockModels object in shared/api.ts
-		const hasCachableFields =
-			(modelConfig?.info as any)?.cachableFields && (modelConfig?.info as any)?.cachableFields?.length > 0
+		const hasCachableFields = modelConfig?.info?.cachableFields && modelConfig.info.cachableFields.length > 0
 
 		if (modelConfig?.info?.supportsPromptCache && hasCachableFields) {
 			return true
@@ -1194,7 +1191,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		// simply ignores cache points without erroring.
 		if (this.options.awsCustomArn && this.options.awsUsePromptCache !== false) {
 			if (!hasCachableFields) {
-				;(modelConfig.info as any).cachableFields = ["system", "messages", "tools"]
+				modelConfig.info.cachableFields = ["system", "messages", "tools"]
 			}
 			modelConfig.info.supportsPromptCache = true
 			return true
