@@ -15,12 +15,6 @@ let approvedTodoList: TodoItem[] | undefined = undefined
 export class UpdateTodoListTool extends BaseTool<"update_todo_list"> {
 	readonly name = "update_todo_list" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): UpdateTodoListParams {
-		return {
-			todos: params.todos || "",
-		}
-	}
-
 	async execute(params: UpdateTodoListParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { pushToolResult, handleError, askApproval } = callbacks
 

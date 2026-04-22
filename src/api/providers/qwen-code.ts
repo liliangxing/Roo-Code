@@ -69,6 +69,12 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 			this.client = new OpenAI({
 				apiKey: "dummy-key-will-be-replaced",
 				baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+				defaultHeaders: {
+					"User-Agent": `QwenCode/1.0.0 (${os.platform()}; ${os.arch()})`,
+					"X-DashScope-CacheControl": "enable",
+					"X-DashScope-UserAgent": `QwenCode/1.0.0 (${os.platform()}; ${os.arch()})`,
+					"X-DashScope-AuthType": "qwen-oauth",
+				},
 			})
 		}
 		return this.client
@@ -212,11 +218,6 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 		const client = this.ensureClient()
 		const model = this.getModel()
 
-		// Check if model supports native tools and tools are provided with native protocol
-		const supportsNativeTools = model.info.supportsNativeTools ?? false
-		const useNativeTools =
-			supportsNativeTools && metadata?.tools && metadata.tools.length > 0 && metadata?.toolProtocol !== "xml"
-
 		const systemMessage: OpenAI.Chat.ChatCompletionSystemMessageParam = {
 			role: "system",
 			content: systemPrompt,
@@ -231,9 +232,9 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 			stream: true,
 			stream_options: { include_usage: true },
 			max_completion_tokens: model.info.maxTokens,
-			...(useNativeTools && { tools: this.convertToolsForOpenAI(metadata.tools) }),
-			...(useNativeTools && metadata.tool_choice && { tool_choice: metadata.tool_choice }),
-			...(useNativeTools && { parallel_tool_calls: metadata?.parallelToolCalls ?? false }),
+			tools: this.convertToolsForOpenAI(metadata?.tools),
+			tool_choice: metadata?.tool_choice,
+			parallel_tool_calls: metadata?.parallelToolCalls ?? true,
 		}
 
 		const stream = await this.callApiWithRetry(() => client.chat.completions.create(requestOptions))

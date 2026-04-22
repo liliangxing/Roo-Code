@@ -1,4 +1,5 @@
 import type { ProviderName, ReasoningEffortExtended } from "@roo-code/types"
+import type { OutputFormat } from "./json-events.js"
 
 export const supportedProviders = [
 	"anthropic",
@@ -18,19 +19,28 @@ export function isSupportedProvider(provider: string): provider is SupportedProv
 export type ReasoningEffortFlagOptions = ReasoningEffortExtended | "unspecified" | "disabled"
 
 export type FlagOptions = {
-	prompt?: string
+	promptFile?: string
+	createWithSessionId?: string
+	sessionId?: string
+	continue: boolean
+	workspace?: string
+	print: boolean
+	stdinPromptStream: boolean
+	signalOnlyExit: boolean
 	extension?: string
 	debug: boolean
-	yes: boolean
+	requireApproval: boolean
+	exitOnError: boolean
 	apiKey?: string
-	provider: SupportedProvider
+	provider?: SupportedProvider
 	model?: string
 	mode?: string
+	terminalShell?: string
 	reasoningEffort?: ReasoningEffortFlagOptions
-	exitOnComplete: boolean
-	waitOnComplete: boolean
+	consecutiveMistakeLimit?: number
 	ephemeral: boolean
-	tui: boolean
+	oneshot: boolean
+	outputFormat?: OutputFormat
 }
 
 export enum OnboardingProviderChoice {
@@ -40,10 +50,26 @@ export enum OnboardingProviderChoice {
 
 export interface OnboardingResult {
 	choice: OnboardingProviderChoice
-	authenticated?: boolean
+	token?: string
 	skipped: boolean
 }
 
 export interface CliSettings {
 	onboardingProviderChoice?: OnboardingProviderChoice
+	/** Default mode to use (e.g., "code", "architect", "ask", "debug") */
+	mode?: string
+	/** Default provider to use */
+	provider?: SupportedProvider
+	/** Default model to use */
+	model?: string
+	/** Default reasoning effort level */
+	reasoningEffort?: ReasoningEffortFlagOptions
+	/** Default consecutive error/repetition limit before guidance prompts */
+	consecutiveMistakeLimit?: number
+	/** Require manual approval for tools/commands/browser/MCP actions */
+	requireApproval?: boolean
+	/** @deprecated Legacy inverse setting kept for backward compatibility */
+	dangerouslySkipPermissions?: boolean
+	/** Exit upon task completion */
+	oneshot?: boolean
 }

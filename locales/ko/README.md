@@ -13,6 +13,12 @@
 
 > AI로 강화된 너의 개발 팀, 네 에디터 안에
 
+## v3.52.0의 새로운 기능
+
+- Poe를 AI 제공업체로 추가해 Roo Code에서 Poe 모델에 직접 접근할 수 있게 했어요.
+- Responses API 마이그레이션, 재사용 가능한 변환 유틸리티, 업데이트된 Grok-4.20 기본값으로 xAI 제공업체를 개선했어요.
+- 더 안정적인 설정을 위해 MiniMax 모델 목록과 컨텍스트 윈도우 처리를 수정했어요.
+
 <details>
   <summary>🌐 사용 가능한 언어</summary>
 
@@ -35,7 +41,7 @@
 - [简体中文](../zh-CN/README.md)
 - [繁體中文](../zh-TW/README.md)
 - ...
-  </details>
+      </details>
 
 ---
 
@@ -58,9 +64,8 @@ Roo Code는 당신의 작업 방식에 맞춰 적응합니다.
 - 질문 모드: 빠른 답변, 설명 및 문서
 - 디버그 모드: 문제 추적, 로그 추가, 근본 원인 격리
 - 사용자 지정 모드: 팀이나 워크플로우를 위한 특수 모드 구축
-- Roomote Control: Roomote Control은 로컬 VS Code 인스턴스에서 실행 중인 작업을 원격으로 제어할 수 있어.
 
-자세히: [모드 사용](https://docs.roocode.com/basic-usage/using-modes) • [사용자 지정 모드](https://docs.roocode.com/advanced-usage/custom-modes) • [Roomote Control](https://docs.roocode.com/roo-code-cloud/roomote-control)
+자세히: [모드 사용](https://docs.roocode.com/basic-usage/using-modes) • [사용자 지정 모드](https://docs.roocode.com/advanced-usage/custom-modes)
 
 ## 튜토리얼 및 기능 비디오
 
@@ -69,7 +74,7 @@ Roo Code는 당신의 작업 방식에 맞춰 적응합니다.
 |                                                                                                                                                                         |                                                                                                                                                                       |                                                                                                                                                                         |
 | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | <a href="https://www.youtube.com/watch?v=Mcq3r1EPZ-4"><img src="https://img.youtube.com/vi/Mcq3r1EPZ-4/maxresdefault.jpg" width="100%"></a><br><b>Roo Code 설치하기</b> | <a href="https://www.youtube.com/watch?v=ZBML8h5cCgo"><img src="https://img.youtube.com/vi/ZBML8h5cCgo/maxresdefault.jpg" width="100%"></a><br><b>프로필 구성하기</b> | <a href="https://www.youtube.com/watch?v=r1bpod1VWhg"><img src="https://img.youtube.com/vi/r1bpod1VWhg/maxresdefault.jpg" width="100%"></a><br><b>코드베이스 인덱싱</b> |
-| <a href="https://www.youtube.com/watch?v=iiAv1eKOaxk"><img src="https://img.youtube.com/vi/iiAv1eKOaxk/maxresdefault.jpg" width="100%"></a><br><b>사용자 지정 모드</b>  |   <a href="https://www.youtube.com/watch?v=Ho30nyY332E"><img src="https://img.youtube.com/vi/Ho30nyY332E/maxresdefault.jpg" width="100%"></a><br><b>체크포인트</b>    |    <a href="https://www.youtube.com/watch?v=HmnNSasv7T8"><img src="https://img.youtube.com/vi/HmnNSasv7T8/maxresdefault.jpg" width="100%"></a><br><b>컨텍스트 관리</b>     |
+| <a href="https://www.youtube.com/watch?v=iiAv1eKOaxk"><img src="https://img.youtube.com/vi/iiAv1eKOaxk/maxresdefault.jpg" width="100%"></a><br><b>사용자 지정 모드</b>  |   <a href="https://www.youtube.com/watch?v=Ho30nyY332E"><img src="https://img.youtube.com/vi/Ho30nyY332E/maxresdefault.jpg" width="100%"></a><br><b>체크포인트</b>    |   <a href="https://www.youtube.com/watch?v=HmnNSasv7T8"><img src="https://img.youtube.com/vi/HmnNSasv7T8/maxresdefault.jpg" width="100%"></a><br><b>컨텍스트 관리</b>   |
 
 </div>
 <p align="center">

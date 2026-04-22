@@ -59,33 +59,39 @@ import ScrollIndicator from "./components/ScrollIndicator.js"
 const PICKER_HEIGHT = 10
 
 export interface TUIAppProps extends ExtensionHostOptions {
-	initialPrompt: string
-	debug: boolean
-	exitOnComplete: boolean
+	initialPrompt?: string
+	initialTaskId?: string
+	initialSessionId?: string
+	continueSession?: boolean
 	version: string
+	// Create extension host factory for dependency injection.
 	createExtensionHost: (options: ExtensionHostOptions) => ExtensionHostInterface
 }
 
 /**
  * Inner App component that uses the terminal size context
  */
-function AppInner({
-	initialPrompt,
-	workspacePath,
-	extensionPath,
-	user,
-	provider,
-	apiKey,
-	model,
-	mode,
-	nonInteractive = false,
-	debug,
-	exitOnComplete,
-	reasoningEffort,
-	ephemeral,
-	version,
-	createExtensionHost,
-}: TUIAppProps) {
+function AppInner({ createExtensionHost, ...extensionHostOptions }: TUIAppProps) {
+	const {
+		initialPrompt,
+		initialTaskId,
+		initialSessionId,
+		continueSession,
+		workspacePath,
+		extensionPath,
+		user,
+		provider,
+		apiKey,
+		model,
+		mode,
+		nonInteractive = false,
+		debug,
+		exitOnComplete,
+		reasoningEffort,
+		ephemeral,
+		version,
+	} = extensionHostOptions
+
 	const { exit } = useApp()
 
 	const {
@@ -170,6 +176,9 @@ function AppInner({
 
 	const { sendToExtension, runTask, cleanup } = useExtensionHost({
 		initialPrompt,
+		initialTaskId,
+		initialSessionId,
+		continueSession,
 		mode,
 		reasoningEffort,
 		user,
@@ -455,12 +464,8 @@ function AppInner({
 			{/* Header - fixed size */}
 			<Box flexShrink={0}>
 				<Header
-					cwd={workspacePath}
-					user={user}
-					provider={provider}
-					model={model}
+					{...extensionHostOptions}
 					mode={currentMode || mode}
-					reasoningEffort={reasoningEffort}
 					version={version}
 					tokenUsage={tokenUsage}
 					contextWindow={contextWindow}

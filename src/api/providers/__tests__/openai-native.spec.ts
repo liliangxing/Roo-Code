@@ -11,6 +11,7 @@ vitest.mock("@roo-code/telemetry", () => ({
 }))
 
 import { Anthropic } from "@anthropic-ai/sdk"
+import OpenAI from "openai"
 
 import { ApiProviderError } from "@roo-code/types"
 
@@ -75,6 +76,28 @@ describe("OpenAiNativeHandler", () => {
 				openAiNativeApiKey: "",
 			})
 			expect(handlerWithoutKey).toBeInstanceOf(OpenAiNativeHandler)
+		})
+
+		it("should pass undefined baseURL when openAiNativeBaseUrl is empty string", () => {
+			;(OpenAI as unknown as ReturnType<typeof vitest.fn>).mockClear()
+			new OpenAiNativeHandler({
+				apiModelId: "gpt-4.1",
+				openAiNativeApiKey: "test-key",
+				openAiNativeBaseUrl: "",
+			})
+			expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({ baseURL: undefined }))
+		})
+
+		it("should pass custom baseURL when openAiNativeBaseUrl is a valid URL", () => {
+			;(OpenAI as unknown as ReturnType<typeof vitest.fn>).mockClear()
+			new OpenAiNativeHandler({
+				apiModelId: "gpt-4.1",
+				openAiNativeApiKey: "test-key",
+				openAiNativeBaseUrl: "https://custom-openai.example.com/v1",
+			})
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({ baseURL: "https://custom-openai.example.com/v1" }),
+			)
 		})
 	})
 
@@ -213,6 +236,86 @@ describe("OpenAiNativeHandler", () => {
 			expect(modelInfo.info.contextWindow).toBe(1047576)
 		})
 
+		it("should return GPT-5.3 Codex model info when selected", () => {
+			const codexHandler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "gpt-5.3-codex",
+			})
+
+			const modelInfo = codexHandler.getModel()
+			expect(modelInfo.id).toBe("gpt-5.3-codex")
+			expect(modelInfo.info.maxTokens).toBe(128000)
+			expect(modelInfo.info.contextWindow).toBe(400000)
+			expect(modelInfo.info.supportsReasoningEffort).toEqual(["low", "medium", "high", "xhigh"])
+		})
+
+		it("should return GPT-5.4 model info when selected", () => {
+			const gpt54Handler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "gpt-5.4",
+			})
+
+			const modelInfo = gpt54Handler.getModel()
+			expect(modelInfo.id).toBe("gpt-5.4")
+			expect(modelInfo.info.maxTokens).toBe(128000)
+			expect(modelInfo.info.contextWindow).toBe(1_050_000)
+			expect(modelInfo.info.supportsVerbosity).toBe(true)
+			expect(modelInfo.info.supportsReasoningEffort).toEqual(["none", "low", "medium", "high", "xhigh"])
+			expect(modelInfo.info.reasoningEffort).toBe("none")
+		})
+
+		it("should return GPT-5.4 Mini model info when selected", () => {
+			const gpt54MiniHandler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "gpt-5.4-mini",
+			})
+
+			const modelInfo = gpt54MiniHandler.getModel()
+			expect(modelInfo.id).toBe("gpt-5.4-mini")
+			expect(modelInfo.info.maxTokens).toBe(128000)
+			expect(modelInfo.info.contextWindow).toBe(400000)
+			expect(modelInfo.info.supportsVerbosity).toBe(true)
+			expect(modelInfo.info.supportsReasoningEffort).toEqual(["none", "low", "medium", "high", "xhigh"])
+			expect(modelInfo.info.reasoningEffort).toBe("none")
+			expect(modelInfo.info.longContextPricing).toBeUndefined()
+		})
+
+		it("should return GPT-5.4 Nano model info when selected", () => {
+			const gpt54NanoHandler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "gpt-5.4-nano",
+			})
+
+			const modelInfo = gpt54NanoHandler.getModel()
+			expect(modelInfo.id).toBe("gpt-5.4-nano")
+			expect(modelInfo.info.maxTokens).toBe(128000)
+			expect(modelInfo.info.contextWindow).toBe(400000)
+			expect(modelInfo.info.supportsVerbosity).toBe(true)
+			expect(modelInfo.info.supportsReasoningEffort).toEqual(["none", "low", "medium", "high", "xhigh"])
+			expect(modelInfo.info.reasoningEffort).toBe("none")
+			expect(modelInfo.info.outputPrice).toBe(1.25)
+			expect(modelInfo.info.longContextPricing).toBeUndefined()
+			expect(modelInfo.info.tiers).toEqual([
+				expect.objectContaining({
+					name: "flex",
+					outputPrice: 0.625,
+				}),
+			])
+		})
+
+		it("should return GPT-5.3 Chat model info when selected", () => {
+			const chatHandler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "gpt-5.3-chat-latest",
+			})
+
+			const modelInfo = chatHandler.getModel()
+			expect(modelInfo.id).toBe("gpt-5.3-chat-latest")
+			expect(modelInfo.info.maxTokens).toBe(16_384)
+			expect(modelInfo.info.contextWindow).toBe(128000)
+			expect(modelInfo.info.supportsImages).toBe(true)
+		})
+
 		it("should handle undefined model ID", () => {
 			const handlerWithoutModel = new OpenAiNativeHandler({
 				openAiNativeApiKey: "test-api-key",
@@ -220,45 +323,6 @@ describe("OpenAiNativeHandler", () => {
 			const modelInfo = handlerWithoutModel.getModel()
 			expect(modelInfo.id).toBe("gpt-5.1-codex-max") // Default model
 			expect(modelInfo.info).toBeDefined()
-		})
-
-		it("should have defaultToolProtocol: native for all OpenAI Native models", () => {
-			// Test that all models have defaultToolProtocol: native
-			const testModels = [
-				"gpt-5.1-codex-max",
-				"gpt-5.2",
-				"gpt-5.1",
-				"gpt-5",
-				"gpt-5-mini",
-				"gpt-5-nano",
-				"gpt-4.1",
-				"gpt-4.1-mini",
-				"gpt-4.1-nano",
-				"o3",
-				"o3-high",
-				"o3-low",
-				"o4-mini",
-				"o4-mini-high",
-				"o4-mini-low",
-				"o3-mini",
-				"o3-mini-high",
-				"o3-mini-low",
-				"o1",
-				"o1-preview",
-				"o1-mini",
-				"gpt-4o",
-				"gpt-4o-mini",
-				"codex-mini-latest",
-			]
-
-			for (const modelId of testModels) {
-				const testHandler = new OpenAiNativeHandler({
-					openAiNativeApiKey: "test-api-key",
-					apiModelId: modelId,
-				})
-				const modelInfo = testHandler.getModel()
-				expect(modelInfo.info.defaultToolProtocol).toBe("native")
-			}
 		})
 	})
 
@@ -346,6 +410,107 @@ describe("OpenAiNativeHandler", () => {
 			expect(textChunks).toHaveLength(2)
 			expect(textChunks[0].text).toBe("Hello")
 			expect(textChunks[1].text).toBe(" world")
+		})
+
+		it("should handle GPT-5.4 model with Responses API", async () => {
+			const mockFetch = vitest.fn().mockResolvedValue({
+				ok: true,
+				body: new ReadableStream({
+					start(controller) {
+						controller.enqueue(
+							new TextEncoder().encode(
+								'data: {"type":"response.output_item.added","item":{"type":"text","text":"GPT-5.4 reply"}}\n\n',
+							),
+						)
+						controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"))
+						controller.close()
+					},
+				}),
+			})
+			global.fetch = mockFetch as any
+
+			mockResponsesCreate.mockRejectedValue(new Error("SDK not available"))
+
+			handler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "gpt-5.4",
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				"https://api.openai.com/v1/responses",
+				expect.objectContaining({
+					body: expect.any(String),
+				}),
+			)
+			const body = (mockFetch.mock.calls[0][1] as any).body as string
+			const parsedBody = JSON.parse(body)
+			expect(parsedBody.model).toBe("gpt-5.4")
+			expect(parsedBody.max_output_tokens).toBe(128000)
+			expect(parsedBody.temperature).toBeUndefined()
+			expect(parsedBody.include).toEqual(["reasoning.encrypted_content"])
+			expect(parsedBody.reasoning?.effort).toBe("none")
+			expect(parsedBody.text?.verbosity).toBe("medium")
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			expect(textChunks).toHaveLength(1)
+			expect(textChunks[0].text).toBe("GPT-5.4 reply")
+		})
+
+		it("should handle GPT-5.3 Chat model with Responses API", async () => {
+			// Mock fetch for Responses API
+			const mockFetch = vitest.fn().mockResolvedValue({
+				ok: true,
+				body: new ReadableStream({
+					start(controller) {
+						controller.enqueue(
+							new TextEncoder().encode(
+								'data: {"type":"response.output_item.added","item":{"type":"text","text":"Chat reply"}}\n\n',
+							),
+						)
+						controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"))
+						controller.close()
+					},
+				}),
+			})
+			global.fetch = mockFetch as any
+
+			// Mock SDK to fail so it uses fetch
+			mockResponsesCreate.mockRejectedValue(new Error("SDK not available"))
+
+			handler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "gpt-5.3-chat-latest",
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				"https://api.openai.com/v1/responses",
+				expect.objectContaining({
+					body: expect.any(String),
+				}),
+			)
+			const body = (mockFetch.mock.calls[0][1] as any).body as string
+			const parsedBody = JSON.parse(body)
+			expect(parsedBody.model).toBe("gpt-5.3-chat-latest")
+			expect(parsedBody.max_output_tokens).toBe(16_384)
+			expect(parsedBody.temperature).toBe(0)
+			expect(parsedBody.reasoning?.effort).toBeUndefined()
+			expect(parsedBody.text?.verbosity).toBeUndefined()
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			expect(textChunks).toHaveLength(1)
+			expect(textChunks[0].text).toBe("Chat reply")
 		})
 
 		it("should handle GPT-5-mini model with Responses API", async () => {

@@ -13,6 +13,12 @@
 
 > Il tuo team di sviluppo con IA, direttamente nel tuo editor
 
+## Novità in v3.52.0
+
+- Aggiunto Poe come provider AI così puoi accedere direttamente ai modelli Poe in Roo Code.
+- Migliorato il provider xAI con una migrazione alla Responses API, utility di trasformazione riutilizzabili e valori predefiniti aggiornati per Grok-4.20.
+- Corretti gli elenchi dei modelli MiniMax e la gestione della finestra di contesto per una configurazione più affidabile.
+
 <details>
   <summary>🌐 Lingue disponibili</summary>
 
@@ -35,7 +41,7 @@
 - [简体中文](../zh-CN/README.md)
 - [繁體中文](../zh-TW/README.md)
 - ...
-  </details>
+      </details>
 
 ---
 
@@ -58,9 +64,8 @@ Roo Code si adatta al tuo modo di lavorare, non il contrario:
 - Modalità Chiedi: risposte rapide, spiegazioni e documenti
 - Modalità Debug: traccia problemi, aggiungi log, isola le cause principali
 - Modalità Personalizzate: crea modalità specializzate per il tuo team o flusso di lavoro
-- Roomote Control: Roomote Control ti permette di controllare da remoto le attività in esecuzione sulla tua istanza locale di VS Code.
 
-Scopri di più: [Usare le Modalità](https://docs.roocode.com/basic-usage/using-modes) • [Modalità personalizzate](https://docs.roocode.com/advanced-usage/custom-modes) • [Roomote Control](https://docs.roocode.com/roo-code-cloud/roomote-control)
+Scopri di più: [Usare le Modalità](https://docs.roocode.com/basic-usage/using-modes) • [Modalità personalizzate](https://docs.roocode.com/advanced-usage/custom-modes)
 
 ## Tutorial e video sulle funzionalità
 
@@ -69,7 +74,7 @@ Scopri di più: [Usare le Modalità](https://docs.roocode.com/basic-usage/using-
 |                                                                                                                                                                                 |                                                                                                                                                                                  |                                                                                                                                                                                     |
 | :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | <a href="https://www.youtube.com/watch?v=Mcq3r1EPZ-4"><img src="https://img.youtube.com/vi/Mcq3r1EPZ-4/maxresdefault.jpg" width="100%"></a><br><b>Installazione di Roo Code</b> | <a href="https://www.youtube.com/watch?v=ZBML8h5cCgo"><img src="https://img.youtube.com/vi/ZBML8h5cCgo/maxresdefault.jpg" width="100%"></a><br><b>Configurazione dei profili</b> | <a href="https://www.youtube.com/watch?v=r1bpod1VWhg"><img src="https://img.youtube.com/vi/r1bpod1VWhg/maxresdefault.jpg" width="100%"></a><br><b>Indicizzazione della codebase</b> |
-|  <a href="https://www.youtube.com/watch?v=iiAv1eKOaxk"><img src="https://img.youtube.com/vi/iiAv1eKOaxk/maxresdefault.jpg" width="100%"></a><br><b>Modalità personalizzate</b>  |         <a href="https://www.youtube.com/watch?v=Ho30nyY332E"><img src="https://img.youtube.com/vi/Ho30nyY332E/maxresdefault.jpg" width="100%"></a><br><b>Checkpoint</b>         |    <a href="https://www.youtube.com/watch?v=HmnNSasv7T8"><img src="https://img.youtube.com/vi/HmnNSasv7T8/maxresdefault.jpg" width="100%"></a><br><b>Gestione del Contesto</b>    |
+|  <a href="https://www.youtube.com/watch?v=iiAv1eKOaxk"><img src="https://img.youtube.com/vi/iiAv1eKOaxk/maxresdefault.jpg" width="100%"></a><br><b>Modalità personalizzate</b>  |         <a href="https://www.youtube.com/watch?v=Ho30nyY332E"><img src="https://img.youtube.com/vi/Ho30nyY332E/maxresdefault.jpg" width="100%"></a><br><b>Checkpoint</b>         |     <a href="https://www.youtube.com/watch?v=HmnNSasv7T8"><img src="https://img.youtube.com/vi/HmnNSasv7T8/maxresdefault.jpg" width="100%"></a><br><b>Gestione del Contesto</b>     |
 
 </div>
 <p align="center">

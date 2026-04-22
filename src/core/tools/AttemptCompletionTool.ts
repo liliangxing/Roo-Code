@@ -36,13 +36,6 @@ interface DelegationProvider {
 export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 	readonly name = "attempt_completion" as const
 
-	parseLegacy(params: Partial<Record<string, string>>): AttemptCompletionParams {
-		return {
-			result: params.result || "",
-			command: params.command,
-		}
-	}
-
 	async execute(params: AttemptCompletionParams, task: Task, callbacks: AttemptCompletionCallbacks): Promise<void> {
 		const { result } = params
 		const { handleError, pushToolResult, askFinishSubTaskApproval } = callbacks
@@ -115,14 +108,17 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 							// without injecting another tool_result to the parent
 						} else if (status === "active") {
 							// Normal subtask completion - do delegation
-							const delegated = await this.delegateToParent(
+							const delegation = await this.delegateToParent(
 								task,
 								result,
 								provider,
 								askFinishSubTaskApproval,
 								pushToolResult,
 							)
-							if (delegated) return
+							if (delegation === "delegated") {
+								this.emitTaskCompleted(task)
+							}
+							if (delegation !== "continue") return
 						} else {
 							// Unexpected status (undefined or "delegated") - log error and skip delegation
 							// undefined indicates a bug in status persistence during child creation
@@ -147,13 +143,14 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 			const { response, text, images } = await task.ask("completion_result", "", false)
 
 			if (response === "yesButtonClicked") {
+				this.emitTaskCompleted(task)
 				return
 			}
 
 			// User provided feedback - push tool result to continue the conversation
 			await task.say("user_feedback", text ?? "", images)
 
-			const feedbackText = `The user has provided feedback on the results. Consider their input to continue the task, and then attempt completion again.\n<feedback>\n${text}\n</feedback>`
+			const feedbackText = `<user_message>\n${text}\n</user_message>`
 			pushToolResult(formatResponse.toolResult(feedbackText, images))
 		} catch (error) {
 			await handleError("inspecting site", error as Error)
@@ -162,7 +159,10 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 
 	/**
 	 * Handles the common delegation flow when a subtask completes.
-	 * Returns true if delegation was performed and the caller should return early.
+	 * Returns:
+	 * - "delegated" when completion was approved and parent resumed
+	 * - "denied" when user denied finishing the subtask
+	 * - "continue" when caller should fall through to normal completion ask flow
 	 */
 	private async delegateToParent(
 		task: Task,
@@ -170,12 +170,12 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 		provider: DelegationProvider,
 		askFinishSubTaskApproval: () => Promise<boolean>,
 		pushToolResult: (result: string) => void,
-	): Promise<boolean> {
+	): Promise<"delegated" | "denied" | "continue"> {
 		const didApprove = await askFinishSubTaskApproval()
 
 		if (!didApprove) {
 			pushToolResult(formatResponse.toolDenied())
-			return true
+			return "denied"
 		}
 
 		pushToolResult("")
@@ -186,7 +186,7 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 			completionResultSummary: result,
 		})
 
-		return true
+		return "delegated"
 	}
 
 	override async handlePartial(task: Task, block: ToolUse<"attempt_completion">): Promise<void> {
@@ -197,35 +197,23 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 
 		if (command) {
 			if (lastMessage && lastMessage.ask === "command") {
-				await task
-					.ask("command", this.removeClosingTag("command", command, block.partial), block.partial)
-					.catch(() => {})
+				await task.ask("command", command ?? "", block.partial).catch(() => {})
 			} else {
-				await task.say(
-					"completion_result",
-					this.removeClosingTag("result", result, block.partial),
-					undefined,
-					false,
-				)
-
-				// Force final token usage update before emitting TaskCompleted for consistency
-				task.emitFinalTokenUsageUpdate()
-
-				TelemetryService.instance.captureTaskCompleted(task.taskId)
-				task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)
-
-				await task
-					.ask("command", this.removeClosingTag("command", command, block.partial), block.partial)
-					.catch(() => {})
+				await task.say("completion_result", result ?? "", undefined, false)
+				await task.ask("command", command ?? "", block.partial).catch(() => {})
 			}
 		} else {
-			await task.say(
-				"completion_result",
-				this.removeClosingTag("result", result, block.partial),
-				undefined,
-				block.partial,
-			)
+			await task.say("completion_result", result ?? "", undefined, block.partial)
 		}
+	}
+
+	private emitTaskCompleted(task: Task): void {
+		// Force final token usage update before emitting TaskCompleted.
+		// This ensures the latest stats are captured regardless of throttle timer.
+		task.emitFinalTokenUsageUpdate()
+
+		TelemetryService.instance.captureTaskCompleted(task.taskId)
+		task.emit(RooCodeEventName.TaskCompleted, task.taskId, task.getTokenUsage(), task.toolUsage)
 	}
 }
 

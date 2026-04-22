@@ -44,9 +44,8 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					<div className="mb-4">
 						<p className="mb-3">{t("chat:announcement.release.heading")}</p>
 						<ul className="list-disc list-inside text-sm space-y-1.5">
-							<li>{t("chat:announcement.release.openaiCodexProvider")}</li>
-							<li>{t("chat:announcement.release.gpt52codexModel")}</li>
-							<li>{t("chat:announcement.release.bugFixes")}</li>
+							<li>{t("chat:announcement.release.gpt54")}</li>
+							<li>{t("chat:announcement.release.slashSkills")}</li>
 						</ul>
 					</div>
 
@@ -73,16 +72,6 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					<div className="mt-3 text-sm text-center text-vscode-descriptionForeground">
 						<Trans i18nKey="chat:announcement.support" components={{ githubLink: <GitHubLink /> }} />
 					</div>
-
-					{/* Careers Section */}
-					<div className="mt-2 text-sm text-center">
-						<Trans
-							i18nKey="chat:announcement.careers"
-							components={{
-								careersLink: <CareersLink />,
-							}}
-						/>
-					</div>
 				</div>
 			</DialogContent>
 		</Dialog>
@@ -108,17 +97,6 @@ const GitHubLink = ({ children }: { children?: ReactNode }) => (
 		onClick={(e) => {
 			e.preventDefault()
 			vscode.postMessage({ type: "openExternal", url: "https://github.com/RooCodeInc/Roo-Code" })
-		}}>
-		{children}
-	</VSCodeLink>
-)
-
-const CareersLink = ({ children }: { children?: ReactNode }) => (
-	<VSCodeLink
-		href="https://careers.roocode.com"
-		onClick={(e) => {
-			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://careers.roocode.com" })
 		}}>
 		{children}
 	</VSCodeLink>

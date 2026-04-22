@@ -296,8 +296,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(4)
@@ -369,8 +367,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(3)
@@ -444,8 +440,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(2)
@@ -506,8 +500,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(1)
@@ -561,8 +553,6 @@ describe("UpdateTodoListTool.execute", () => {
 				setPendingTodoList(userEditedTodos)
 				return true
 			}),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(1)
@@ -612,8 +602,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		} as any)
 
 		expect(task.todoList).toHaveLength(2)
@@ -670,8 +658,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(2)
@@ -732,8 +718,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(2)
@@ -756,8 +740,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(3)
@@ -797,8 +779,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(2)
@@ -847,8 +827,6 @@ describe("UpdateTodoListTool.execute", () => {
 			pushToolResult: vi.fn(),
 			handleError: vi.fn(),
 			askApproval: vi.fn().mockResolvedValue(true),
-			removeClosingTag: vi.fn(),
-			toolProtocol: "xml",
 		})
 
 		expect(task.todoList).toHaveLength(2)

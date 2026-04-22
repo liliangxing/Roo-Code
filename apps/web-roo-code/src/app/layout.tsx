@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import { SEO } from "@/lib/seo"
 import { ogImageUrl } from "@/lib/og"
 import { CookieConsentWrapper } from "@/components/CookieConsentWrapper"
+import { RoomoteAnnouncementBanner } from "@/components/RoomoteAnnouncementBanner"
 
 import { Providers } from "@/components/providers"
 
@@ -97,6 +98,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				/>
 			</head>
 			<body className={inter.className}>
+				<RoomoteAnnouncementBanner />
 				<div itemScope itemType="https://schema.org/WebSite">
 					<link itemProp="url" href={SEO.url} />
 					<meta itemProp="name" content={SEO.name} />

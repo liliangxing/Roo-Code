@@ -3,16 +3,7 @@ import { useTranslation } from "react-i18next"
 import { useCloudUpsell } from "@src/hooks/useCloudUpsell"
 import { CloudUpsellDialog } from "@src/components/cloud/CloudUpsellDialog"
 import DismissibleUpsell from "@src/components/common/DismissibleUpsell"
-import {
-	ChevronUp,
-	ChevronDown,
-	SquarePen,
-	Coins,
-	HardDriveDownload,
-	HardDriveUpload,
-	FoldVertical,
-	Globe,
-} from "lucide-react"
+import { ChevronUp, ChevronDown, HardDriveDownload, HardDriveUpload, FoldVertical, ArrowLeft } from "lucide-react"
 import prettyBytes from "pretty-bytes"
 
 import type { ClineMessage } from "@roo-code/types"
@@ -23,7 +14,7 @@ import { findLastIndex } from "@roo/array"
 import { formatLargeNumber } from "@src/utils/format"
 import { getTaskHeaderCostTooltipData } from "@src/utils/taskCostBreakdown"
 import { cn } from "@src/lib/utils"
-import { StandardTooltip, Button } from "@src/components/ui"
+import { StandardTooltip, Button, Table, TableBody, TableRow, TableCell, CircularProgress } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
 import { vscode } from "@src/utils/vscode"
@@ -46,6 +37,7 @@ export interface TaskHeaderProps {
 	totalCost: number
 	aggregatedCost?: number
 	hasSubtasks?: boolean
+	parentTaskId?: string
 	costBreakdown?: string
 	subtaskDetails?: SubtaskDetail[]
 	contextTokens: number
@@ -63,6 +55,7 @@ const TaskHeader = ({
 	totalCost,
 	aggregatedCost,
 	hasSubtasks,
+	parentTaskId,
 	costBreakdown,
 	subtaskDetails,
 	contextTokens,
@@ -71,7 +64,7 @@ const TaskHeader = ({
 	todos,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, currentTaskItem, clineMessages, isBrowserSessionActive } = useExtensionState()
+	const { apiConfiguration, currentTaskItem, clineMessages } = useExtensionState()
 	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 	const [showLongRunningTaskMessage, setShowLongRunningTaskMessage] = useState(false)
@@ -107,17 +100,19 @@ const TaskHeader = ({
 	const textRef = useRef<HTMLDivElement>(null)
 	const contextWindow = model?.contextWindow || 1
 
-	// Detect if this task had any browser session activity so we can show a grey globe when inactive
-	const browserSessionStartIndex = useMemo(() => {
-		const msgs = clineMessages || []
-		for (let i = 0; i < msgs.length; i++) {
-			const m = msgs[i] as any
-			if (m?.ask === "browser_action_launch") return i
-		}
-		return -1
-	}, [clineMessages])
-
-	const showBrowserGlobe = browserSessionStartIndex !== -1 || !!isBrowserSessionActive
+	// Calculate maxTokens (reserved for output) once for reuse in percentage and tooltip
+	const maxTokens = useMemo(
+		() =>
+			model
+				? getModelMaxOutputTokens({
+						modelId,
+						model,
+						settings: apiConfiguration,
+					})
+				: 0,
+		[model, modelId, apiConfiguration],
+	)
+	const reservedForOutput = maxTokens || 0
 
 	const condenseButton = (
 		<LucideIconButton
@@ -181,8 +176,29 @@ const TaskHeader = ({
 	const shouldTreatAsHasSubtasks = tooltipCostData.hasSubtasks
 	const hasAnyCost = tooltipCostData.hasAnyCost
 
+	// Determine if this is a subtask (has a parent)
+	const isSubtask = !!parentTaskId
+
+	const handleBackToParent = () => {
+		if (parentTaskId) {
+			vscode.postMessage({ type: "showTaskWithId", text: parentTaskId })
+		}
+	}
+
 	return (
 		<div className="group pt-2 pb-0 px-3">
+			{isSubtask && (
+				<div className="mb-2" onClick={(e) => e.stopPropagation()}>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={handleBackToParent}
+						className="flex items-center gap-1.5 text-xs text-vscode-descriptionForeground hover:text-vscode-foreground">
+						<ArrowLeft className="size-3" />
+						{t("chat:task.backToParentTask")}
+					</Button>
+				</div>
+			)}
 			{showLongRunningTaskMessage && !isTaskComplete && (
 				<DismissibleUpsell
 					upsellId="longRunningTask"
@@ -232,11 +248,8 @@ const TaskHeader = ({
 						<div className="grow min-w-0">
 							{isTaskExpanded && <span className="font-bold">{t("chat:task.title")}</span>}
 							{!isTaskExpanded && (
-								<div className="flex items-center gap-2">
-									<SquarePen className="size-3 shrink-0" />
-									<span className="whitespace-nowrap overflow-hidden text-ellipsis">
-										<Mention text={task.text} />
-									</span>
+								<div className="flex items-center gap-2 whitespace-nowrap overflow-hidden text-ellipsis">
+									<Mention text={task.text} />
 								</div>
 							)}
 						</div>
@@ -260,119 +273,104 @@ const TaskHeader = ({
 						className="flex items-center justify-between text-sm text-muted-foreground/70"
 						onClick={(e) => e.stopPropagation()}>
 						<div className="flex items-center gap-2">
-							<Coins className="size-3 shrink-0" />
 							<StandardTooltip
-								content={
-									<div className="space-y-1">
-										<div>
-											{t("chat:tokenProgress.tokensUsed", {
-												used: formatLargeNumber(contextTokens || 0),
-												total: formatLargeNumber(contextWindow),
-											})}
-										</div>
-										{(() => {
-											const maxTokens = model
-												? getModelMaxOutputTokens({
-														modelId,
-														model,
-														settings: apiConfiguration,
-													})
-												: 0
-											const reservedForOutput = maxTokens || 0
-											const availableSpace =
-												contextWindow - (contextTokens || 0) - reservedForOutput
+								content={(() => {
+									const availableSpace = contextWindow - (contextTokens || 0) - reservedForOutput
 
-											return (
-												<>
-													{reservedForOutput > 0 && (
-														<div>
-															{t("chat:tokenProgress.reservedForResponse", {
-																amount: formatLargeNumber(reservedForOutput),
-															})}
-														</div>
-													)}
-													{availableSpace > 0 && (
-														<div>
-															{t("chat:tokenProgress.availableSpace", {
-																amount: formatLargeNumber(availableSpace),
-															})}
-														</div>
-													)}
-												</>
-											)
-										})()}
-									</div>
-								}
+									return (
+										<Table className="text-base ml-1.5">
+											<TableBody>
+												<TableRow>
+													<TableCell className="font-medium whitespace-nowrap">
+														{t("chat:tokenProgress.tokensUsedLabel")}
+													</TableCell>
+													<TableCell className="text-right text-[0.9em] font-mono">
+														{formatLargeNumber(contextTokens || 0)} /{" "}
+														{formatLargeNumber(contextWindow)}
+													</TableCell>
+												</TableRow>
+												{reservedForOutput > 0 && (
+													<TableRow>
+														<TableCell className="font-medium whitespace-nowrap">
+															{t("chat:tokenProgress.reservedForResponseLabel")}
+														</TableCell>
+														<TableCell className="text-right text-[0.9em] font-mono">
+															{formatLargeNumber(reservedForOutput)}
+														</TableCell>
+													</TableRow>
+												)}
+												{availableSpace > 0 && (
+													<TableRow>
+														<TableCell className="font-medium whitespace-nowrap">
+															{t("chat:tokenProgress.availableSpaceLabel")}
+														</TableCell>
+														<TableCell className="text-right text-[0.9em] font-mono">
+															{formatLargeNumber(availableSpace)}
+														</TableCell>
+													</TableRow>
+												)}
+											</TableBody>
+										</Table>
+									)
+								})()}
 								side="top"
 								sideOffset={8}>
-								<span className="mr-1">
-									{formatLargeNumber(contextTokens || 0)} / {formatLargeNumber(contextWindow)}
+								<span className="flex items-center gap-1.5">
+									{(() => {
+										// Calculate percentage of available input space used
+										// Available input space = context window - reserved for output
+										const availableInputSpace = contextWindow - reservedForOutput
+										const percentage =
+											availableInputSpace > 0
+												? Math.round(((contextTokens || 0) / availableInputSpace) * 100)
+												: 0
+										return (
+											<>
+												<CircularProgress percentage={percentage} />
+												<span>{percentage}%</span>
+											</>
+										)
+									})()}
 								</span>
 							</StandardTooltip>
 							{hasAnyCost && (
-								<StandardTooltip
-									content={
-										shouldTreatAsHasSubtasks ? (
-											<div className="space-y-1">
-												<div>
-													{t("chat:costs.totalWithSubtasks", {
-														cost: displayTotalCost.toFixed(2),
-													})}
+								<>
+									<span>·</span>
+									<StandardTooltip
+										content={
+											shouldTreatAsHasSubtasks ? (
+												<div className="space-y-1">
+													<div>
+														{t("chat:costs.totalWithSubtasks", {
+															cost: displayTotalCost.toFixed(2),
+														})}
+													</div>
+													{displayCostBreakdown && (
+														<div className="text-xs mt-1">{displayCostBreakdown}</div>
+													)}
 												</div>
-												{displayCostBreakdown && (
-													<div className="text-xs mt-1">{displayCostBreakdown}</div>
+											) : (
+												<div>{t("chat:costs.total", { cost: totalCost.toFixed(2) })}</div>
+											)
+										}
+										side="top"
+										sideOffset={8}>
+										<>
+											<span className="tabular-nums">
+												${displayTotalCost.toFixed(2)}
+												{shouldTreatAsHasSubtasks && (
+													<span
+														className="text-xs ml-1"
+														title={t("chat:costs.includesSubtasks")}>
+														*
+													</span>
 												)}
-											</div>
-										) : (
-											<div>{t("chat:costs.total", { cost: totalCost.toFixed(2) })}</div>
-										)
-									}
-									side="top"
-									sideOffset={8}>
-									<span className="tabular-nums">
-										${displayTotalCost.toFixed(2)}
-										{shouldTreatAsHasSubtasks && (
-											<span className="text-xs ml-1" title={t("chat:costs.includesSubtasks")}>
-												*
 											</span>
-										)}
-									</span>
-								</StandardTooltip>
+										</>
+									</StandardTooltip>
+								</>
 							)}
 						</div>
-						{showBrowserGlobe && (
-							<div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-								<StandardTooltip content={t("chat:browser.session")}>
-									<Button
-										variant="ghost"
-										size="sm"
-										aria-label={t("chat:browser.session")}
-										onClick={() => vscode.postMessage({ type: "openBrowserSessionPanel" } as any)}
-										className={cn(
-											"relative h-5 w-5 p-0",
-											"text-vscode-foreground opacity-85",
-											"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)]",
-											"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-										)}>
-										<Globe
-											className="w-4 h-4"
-											style={{
-												color: isBrowserSessionActive
-													? "#4ade80"
-													: "var(--vscode-descriptionForeground)",
-											}}
-										/>
-									</Button>
-								</StandardTooltip>
-								{isBrowserSessionActive && (
-									<span
-										className="text-sm font-medium"
-										style={{ color: "var(--vscode-testing-iconPassed)" }}>
-										{t("chat:browser.active")}
-									</span>
-								)}
-							</div>
-						)}
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}
@@ -413,15 +411,7 @@ const TaskHeader = ({
 													<ContextWindowProgress
 														contextWindow={contextWindow}
 														contextTokens={contextTokens || 0}
-														maxTokens={
-															model
-																? getModelMaxOutputTokens({
-																		modelId,
-																		model,
-																		settings: apiConfiguration,
-																	})
-																: undefined
-														}
+														maxTokens={maxTokens || undefined}
 													/>
 													{condenseButton}
 												</div>

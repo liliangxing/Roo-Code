@@ -24,11 +24,8 @@ import { getLiteLLMModels } from "./litellm"
 import { GetModelsOptions } from "../../../shared/api"
 import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
-import { getIOIntelligenceModels } from "./io-intelligence"
-import { getDeepInfraModels } from "./deepinfra"
-import { getHuggingFaceModels } from "./huggingface"
+import { getPoeModels } from "./poe"
 import { getRooModels } from "./roo"
-import { getChutesModels } from "./chutes"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -74,7 +71,6 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			models = await getRequestyModels(options.baseUrl, options.apiKey)
 			break
 		case "unbound":
-			// Unbound models endpoint requires an API key to fetch application specific models.
 			models = await getUnboundModels(options.apiKey)
 			break
 		case "litellm":
@@ -87,17 +83,8 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 		case "lmstudio":
 			models = await getLMStudioModels(options.baseUrl)
 			break
-		case "deepinfra":
-			models = await getDeepInfraModels(options.apiKey, options.baseUrl)
-			break
-		case "io-intelligence":
-			models = await getIOIntelligenceModels(options.apiKey)
-			break
 		case "vercel-ai-gateway":
 			models = await getVercelAiGatewayModels()
-			break
-		case "huggingface":
-			models = await getHuggingFaceModels()
 			break
 		case "roo": {
 			// Roo Code Cloud provider requires baseUrl and optional apiKey
@@ -105,8 +92,8 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 			models = await getRooModels(rooBaseUrl, options.apiKey)
 			break
 		}
-		case "chutes":
-			models = await getChutesModels(options.apiKey)
+		case "poe":
+			models = await getPoeModels(options.apiKey, options.baseUrl)
 			break
 		default: {
 			// Ensures router is exhaustively checked if RouterName is a strict union.
@@ -249,7 +236,6 @@ export async function initializeModelCacheRefresh(): Promise<void> {
 		const publicProviders: Array<{ provider: RouterName; options: GetModelsOptions }> = [
 			{ provider: "openrouter", options: { provider: "openrouter" } },
 			{ provider: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
-			{ provider: "chutes", options: { provider: "chutes" } },
 		]
 
 		// Refresh each provider in background (fire and forget)

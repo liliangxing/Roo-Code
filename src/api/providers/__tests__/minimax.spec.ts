@@ -87,6 +87,22 @@ describe("MiniMaxHandler", () => {
 			expect(model.info).toEqual(minimaxModels[testModelId])
 		})
 
+		it("should return MiniMax-M2.5 model with correct configuration", () => {
+			const testModelId: MinimaxModelId = "MiniMax-M2.5"
+			const handlerWithModel = new MiniMaxHandler({
+				apiModelId: testModelId,
+				minimaxApiKey: "test-minimax-api-key",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(minimaxModels[testModelId])
+			expect(model.info.contextWindow).toBe(204_800)
+			expect(model.info.maxTokens).toBe(16_384)
+			expect(model.info.supportsPromptCache).toBe(true)
+			expect(model.info.cacheWritesPrice).toBe(0.375)
+			expect(model.info.cacheReadsPrice).toBe(0.03)
+		})
+
 		it("should return MiniMax-M2 model with correct configuration", () => {
 			const testModelId: MinimaxModelId = "MiniMax-M2"
 			const handlerWithModel = new MiniMaxHandler({
@@ -96,7 +112,7 @@ describe("MiniMaxHandler", () => {
 			const model = handlerWithModel.getModel()
 			expect(model.id).toBe(testModelId)
 			expect(model.info).toEqual(minimaxModels[testModelId])
-			expect(model.info.contextWindow).toBe(192_000)
+			expect(model.info.contextWindow).toBe(204_800)
 			expect(model.info.maxTokens).toBe(16_384)
 			expect(model.info.supportsPromptCache).toBe(true)
 			expect(model.info.cacheWritesPrice).toBe(0.375)
@@ -112,7 +128,7 @@ describe("MiniMaxHandler", () => {
 			const model = handlerWithModel.getModel()
 			expect(model.id).toBe(testModelId)
 			expect(model.info).toEqual(minimaxModels[testModelId])
-			expect(model.info.contextWindow).toBe(192_000)
+			expect(model.info.contextWindow).toBe(204_800)
 			expect(model.info.maxTokens).toBe(16_384)
 			expect(model.info.supportsPromptCache).toBe(true)
 			expect(model.info.cacheWritesPrice).toBe(0.375)
@@ -175,10 +191,10 @@ describe("MiniMaxHandler", () => {
 			expect(model.info).toEqual(minimaxModels[minimaxDefaultModelId])
 		})
 
-		it("should default to MiniMax-M2 model", () => {
+		it("should default to MiniMax-M2.7 model", () => {
 			const handlerDefault = new MiniMaxHandler({ minimaxApiKey: "test-minimax-api-key" })
 			const model = handlerDefault.getModel()
-			expect(model.id).toBe("MiniMax-M2")
+			expect(model.id).toBe("MiniMax-M2.7")
 		})
 	})
 
@@ -383,7 +399,7 @@ describe("MiniMaxHandler", () => {
 		it("should correctly configure MiniMax-M2 model properties", () => {
 			const model = minimaxModels["MiniMax-M2"]
 			expect(model.maxTokens).toBe(16_384)
-			expect(model.contextWindow).toBe(192_000)
+			expect(model.contextWindow).toBe(204_800)
 			expect(model.supportsImages).toBe(false)
 			expect(model.supportsPromptCache).toBe(true)
 			expect(model.inputPrice).toBe(0.3)
@@ -395,13 +411,71 @@ describe("MiniMaxHandler", () => {
 		it("should correctly configure MiniMax-M2-Stable model properties", () => {
 			const model = minimaxModels["MiniMax-M2-Stable"]
 			expect(model.maxTokens).toBe(16_384)
-			expect(model.contextWindow).toBe(192_000)
+			expect(model.contextWindow).toBe(204_800)
 			expect(model.supportsImages).toBe(false)
 			expect(model.supportsPromptCache).toBe(true)
 			expect(model.inputPrice).toBe(0.3)
 			expect(model.outputPrice).toBe(1.2)
 			expect(model.cacheWritesPrice).toBe(0.375)
 			expect(model.cacheReadsPrice).toBe(0.03)
+		})
+
+		it("should correctly configure MiniMax-M2.7 model properties", () => {
+			const model = minimaxModels["MiniMax-M2.7"]
+			expect(model.maxTokens).toBe(16_384)
+			expect(model.contextWindow).toBe(204_800)
+			expect(model.supportsImages).toBe(false)
+			expect(model.supportsPromptCache).toBe(true)
+			expect(model.inputPrice).toBe(0.3)
+			expect(model.outputPrice).toBe(1.2)
+			expect(model.cacheWritesPrice).toBe(0.375)
+			expect(model.cacheReadsPrice).toBe(0.06)
+		})
+
+		it("should correctly configure MiniMax-M2.7-highspeed model properties", () => {
+			const model = minimaxModels["MiniMax-M2.7-highspeed"]
+			expect(model.maxTokens).toBe(16_384)
+			expect(model.contextWindow).toBe(204_800)
+			expect(model.supportsImages).toBe(false)
+			expect(model.supportsPromptCache).toBe(true)
+			expect(model.inputPrice).toBe(0.6)
+			expect(model.outputPrice).toBe(2.4)
+			expect(model.cacheWritesPrice).toBe(0.375)
+			expect(model.cacheReadsPrice).toBe(0.06)
+		})
+
+		it("should correctly configure MiniMax-M2.5-highspeed model properties", () => {
+			const model = minimaxModels["MiniMax-M2.5-highspeed"]
+			expect(model.maxTokens).toBe(16_384)
+			expect(model.contextWindow).toBe(204_800)
+			expect(model.supportsImages).toBe(false)
+			expect(model.supportsPromptCache).toBe(true)
+			expect(model.inputPrice).toBe(0.6)
+			expect(model.outputPrice).toBe(2.4)
+			expect(model.cacheWritesPrice).toBe(0.375)
+			expect(model.cacheReadsPrice).toBe(0.03)
+		})
+
+		it("should correctly configure MiniMax-M2.1-highspeed model properties", () => {
+			const model = minimaxModels["MiniMax-M2.1-highspeed"]
+			expect(model.maxTokens).toBe(16_384)
+			expect(model.contextWindow).toBe(204_800)
+			expect(model.supportsImages).toBe(false)
+			expect(model.supportsPromptCache).toBe(true)
+			expect(model.inputPrice).toBe(0.6)
+			expect(model.outputPrice).toBe(2.4)
+			expect(model.cacheWritesPrice).toBe(0.375)
+			expect(model.cacheReadsPrice).toBe(0.03)
+		})
+
+		it("should correctly configure MiniMax-M2.1 model properties with updated context window", () => {
+			const model = minimaxModels["MiniMax-M2.1"]
+			expect(model.contextWindow).toBe(204_800)
+		})
+
+		it("should correctly configure MiniMax-M2 model properties with updated context window", () => {
+			const model = minimaxModels["MiniMax-M2"]
+			expect(model.contextWindow).toBe(204_800)
 		})
 	})
 })

@@ -31,6 +31,7 @@ describe("runSlashCommandTool", () => {
 							runSlashCommand: true,
 						},
 					}),
+					getSkillsManager: vi.fn().mockReturnValue(undefined),
 				}),
 			},
 		}
@@ -39,7 +40,6 @@ describe("runSlashCommandTool", () => {
 			askApproval: vi.fn().mockResolvedValue(true),
 			handleError: vi.fn(),
 			pushToolResult: vi.fn(),
-			removeClosingTag: vi.fn((tag, text) => text || ""),
 		}
 	})
 
@@ -49,6 +49,9 @@ describe("runSlashCommandTool", () => {
 			name: "run_slash_command" as const,
 			params: {},
 			partial: false,
+			nativeArgs: {
+				command: "",
+			},
 		}
 
 		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
@@ -63,10 +66,11 @@ describe("runSlashCommandTool", () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "nonexistent",
 			},
-			partial: false,
 		}
 
 		vi.mocked(getCommand).mockResolvedValue(undefined)
@@ -80,14 +84,131 @@ describe("runSlashCommandTool", () => {
 		)
 	})
 
+	it("should fallback to skill content when command is missing and matching skill exists", async () => {
+		const block: ToolUse<"run_slash_command"> = {
+			type: "tool_use" as const,
+			name: "run_slash_command" as const,
+			params: {},
+			partial: false,
+			nativeArgs: {
+				command: "skill-only",
+				args: "target flow",
+			},
+		}
+
+		const getSkillContent = vi.fn().mockResolvedValue({
+			name: "skill-only",
+			description: "Skill-generated command",
+			path: "/mock/.roo/skills/skill-only/SKILL.md",
+			source: "project" as const,
+			instructions: "Use skill workflow",
+		})
+
+		mockTask.providerRef.deref = vi.fn().mockReturnValue({
+			getState: vi.fn().mockResolvedValue({
+				experiments: {
+					runSlashCommand: true,
+				},
+				mode: "code",
+			}),
+			getSkillsManager: vi.fn().mockReturnValue({
+				getSkillContent,
+			}),
+		})
+
+		vi.mocked(getCommand).mockResolvedValue(undefined)
+
+		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
+
+		expect(getSkillContent).toHaveBeenCalledWith("skill-only", "code")
+		expect(mockCallbacks.askApproval).toHaveBeenCalledWith(
+			"tool",
+			JSON.stringify({
+				tool: "skill",
+				skill: "skill-only",
+				args: "target flow",
+				source: "project",
+				description: "Skill-generated command",
+			}),
+		)
+		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
+			`Skill: skill-only
+Description: Skill-generated command
+Provided arguments: target flow
+Source: project
+
+--- Skill Instructions ---
+
+Use skill workflow`,
+		)
+		expect(mockTask.recordToolError).not.toHaveBeenCalledWith("run_slash_command")
+		expect(getCommandNames).not.toHaveBeenCalled()
+	})
+
+	it("should preserve command precedence over skill fallback", async () => {
+		const block: ToolUse<"run_slash_command"> = {
+			type: "tool_use" as const,
+			name: "run_slash_command" as const,
+			params: {},
+			partial: false,
+			nativeArgs: {
+				command: "setup",
+			},
+		}
+
+		const mockCommand = {
+			name: "setup",
+			content: "Command content",
+			source: "project" as const,
+			filePath: ".roo/commands/setup.md",
+			description: "Real command",
+		}
+
+		const getSkillContent = vi.fn().mockResolvedValue({
+			name: "setup",
+			description: "Setup skill",
+			path: "/mock/.roo/skills/setup/SKILL.md",
+			source: "project" as const,
+			instructions: "Skill should not run",
+		})
+
+		mockTask.providerRef.deref = vi.fn().mockReturnValue({
+			getState: vi.fn().mockResolvedValue({
+				experiments: {
+					runSlashCommand: true,
+				},
+				mode: "code",
+			}),
+			getSkillsManager: vi.fn().mockReturnValue({
+				getSkillContent,
+			}),
+		})
+
+		vi.mocked(getCommand).mockResolvedValue(mockCommand)
+
+		await runSlashCommandTool.handle(mockTask as Task, block, mockCallbacks)
+
+		expect(getSkillContent).not.toHaveBeenCalled()
+		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
+			`Command: /setup
+Description: Real command
+Source: project
+
+--- Command Content ---
+
+Command content`,
+		)
+	})
+
 	it("should handle user rejection", async () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -111,10 +232,11 @@ describe("runSlashCommandTool", () => {
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -155,11 +277,12 @@ Initialize project content here`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "test",
 				args: "focus on unit tests",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -192,10 +315,11 @@ Run tests with specific focus`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "deploy",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -225,6 +349,7 @@ Deploy application to production`,
 			name: "run_slash_command" as const,
 			params: {
 				command: "init",
+				args: "",
 			},
 			partial: true,
 		}
@@ -248,10 +373,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		const error = new Error("Test error")
@@ -266,10 +392,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "nonexistent",
 			},
-			partial: false,
 		}
 
 		vi.mocked(getCommand).mockResolvedValue(undefined)
@@ -286,10 +413,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "init",
 			},
-			partial: false,
 		}
 
 		mockTask.consecutiveMistakeCount = 5
@@ -313,10 +441,11 @@ Deploy application to production`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "debug-app",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -360,10 +489,11 @@ Start debugging the application`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "test",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {
@@ -395,10 +525,11 @@ Start debugging the application`,
 		const block: ToolUse<"run_slash_command"> = {
 			type: "tool_use" as const,
 			name: "run_slash_command" as const,
-			params: {
+			params: {},
+			partial: false,
+			nativeArgs: {
 				command: "debug-app",
 			},
-			partial: false,
 		}
 
 		const mockCommand = {

@@ -1,5 +1,5 @@
 ---
-description: "Create a new release of the Roo Code CLI"
+description: "Prepare a new release of the Roo Code CLI"
 argument-hint: "[version-description]"
 mode: code
 ---
@@ -48,35 +48,39 @@ mode: code
     - Include links to relevant source files where helpful
     - Describe changes from the user's perspective
 
-5. Commit the version bump and changelog update:
+5. Create a release branch and commit the changes:
 
     ```bash
+    # Ensure you're on main and up to date
+    git checkout main
+    git pull origin main
+
+    # Create a new branch for the release
+    git checkout -b cli-release-v<version>
+
+    # Commit the version bump and changelog update
     git add apps/cli/package.json apps/cli/CHANGELOG.md
     git commit -m "chore(cli): prepare release v<version>"
+
+    # Push the branch to origin
+    git push -u origin cli-release-v<version>
     ```
 
-6. Run the release script from the monorepo root:
+6. Create a pull request for the release:
 
     ```bash
-    ./apps/cli/scripts/release.sh
+    gh pr create --title "chore(cli): prepare release v<version>" \
+        --body "## CLI Release v<version>
+
+    This PR prepares the CLI release v<version>.
+
+    ### Changes
+    - Version bump in package.json
+    - Changelog update
+
+    ### Checklist
+    - [ ] Version number is correct
+    - [ ] Changelog entry is complete and accurate
+    - [ ] All CI checks pass" \
+        --base main
     ```
-
-    The release script will automatically:
-
-    - Build the extension and CLI
-    - Create a platform-specific tarball
-    - Verify the installation works correctly (runs --help, --version, and e2e test)
-    - Extract changelog content and include it in the GitHub release notes
-    - Create the GitHub release with the tarball attached
-
-7. After a successful release, verify:
-    - Check the release page: https://github.com/RooCodeInc/Roo-Code/releases
-    - Verify the "What's New" section contains the changelog content
-    - Test installation: `curl -fsSL https://raw.githubusercontent.com/RooCodeInc/Roo-Code/main/apps/cli/install.sh | sh`
-
-**Notes:**
-
-- The release script requires GitHub CLI (`gh`) to be installed and authenticated
-- If a release already exists for the tag, the script will prompt to delete and recreate it
-- The script creates a tarball for the current platform only (darwin-arm64, darwin-x64, linux-arm64, or linux-x64)
-- Multi-platform releases require running the script on each platform and manually uploading additional tarballs
