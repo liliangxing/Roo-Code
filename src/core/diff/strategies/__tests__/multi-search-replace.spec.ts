@@ -131,6 +131,43 @@ describe("MultiSearchReplaceDiffStrategy", () => {
 			expect(result.error).toContain("Expected '>>>>>>> REPLACE' was not found")
 		})
 
+		it("detects malformed separator with content on the same line (no newline after -------)", () => {
+			const diff =
+				"<<<<<<< SEARCH\n" +
+				":start_line:7\n" +
+				"-------import { useTranslate } from '../../i18n/I18nContext';\n" +
+				"=======\n" +
+				"new content\n" +
+				">>>>>>> REPLACE"
+			const result = strategy["validateMarkerSequencing"](diff)
+			expect(result.success).toBe(false)
+			expect(result.error).toContain("separator line '-------'")
+			expect(result.error).toContain("must be on its own line")
+			expect(result.error).toContain("import { useTranslate }")
+		})
+
+		it("detects malformed separator without start_line", () => {
+			const diff =
+				"<<<<<<< SEARCH\n" + "-------some content here\n" + "=======\n" + "new content\n" + ">>>>>>> REPLACE"
+			const result = strategy["validateMarkerSequencing"](diff)
+			expect(result.success).toBe(false)
+			expect(result.error).toContain("separator line '-------'")
+			expect(result.error).toContain("some content here")
+		})
+
+		it("allows properly formatted separator on its own line", () => {
+			const diff =
+				"<<<<<<< SEARCH\n" +
+				":start_line:7\n" +
+				"-------\n" +
+				"import { useTranslate } from '../../i18n/I18nContext';\n" +
+				"=======\n" +
+				"new content\n" +
+				">>>>>>> REPLACE"
+			const result = strategy["validateMarkerSequencing"](diff)
+			expect(result.success).toBe(true)
+		})
+
 		describe("exact matching", () => {
 			let strategy: MultiSearchReplaceDiffStrategy
 
