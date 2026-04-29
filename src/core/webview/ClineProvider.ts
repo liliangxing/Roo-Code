@@ -999,7 +999,12 @@ export class ClineProvider
 			const lockApiConfigAcrossModes = this.context.workspaceState.get("lockApiConfigAcrossModes", false)
 
 			if (!historyItem.apiConfigName && !lockApiConfigAcrossModes && !skipProfileRestoreFromHistory) {
-				const savedConfigId = await this.providerSettingsManager.getModeConfigId(historyItem.mode)
+				// Check workspace-level override first, then fall back to global mode config.
+				const workspaceModeApiConfigs =
+					this.context.workspaceState.get<Record<string, string>>("workspaceModeApiConfigs") ?? {}
+				const workspaceConfigId = workspaceModeApiConfigs[historyItem.mode]
+				const savedConfigId =
+					workspaceConfigId ?? (await this.providerSettingsManager.getModeConfigId(historyItem.mode))
 				const listApiConfig = await this.providerSettingsManager.listConfig()
 
 				// Update listApiConfigMeta first to ensure UI has latest data.
@@ -1433,8 +1438,13 @@ export class ClineProvider
 			return
 		}
 
+		// Check for workspace-level mode-to-profile override first, then fall back to global.
+		const workspaceModeApiConfigs =
+			this.context.workspaceState.get<Record<string, string>>("workspaceModeApiConfigs") ?? {}
+		const workspaceConfigId = workspaceModeApiConfigs[newMode]
+
 		// Load the saved API config for the new mode if it exists.
-		const savedConfigId = await this.providerSettingsManager.getModeConfigId(newMode)
+		const savedConfigId = workspaceConfigId ?? (await this.providerSettingsManager.getModeConfigId(newMode))
 		const listApiConfig = await this.providerSettingsManager.listConfig()
 
 		// Update listApiConfigMeta first to ensure UI has latest data.
@@ -2563,6 +2573,10 @@ export class ClineProvider
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
 			lockApiConfigAcrossModes: this.context.workspaceState.get("lockApiConfigAcrossModes", false),
+			workspaceModeApiConfigs: this.context.workspaceState.get<Record<string, string>>(
+				"workspaceModeApiConfigs",
+				{},
+			),
 			includeDiagnosticMessages: stateValues.includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: stateValues.maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: stateValues.includeTaskHistoryInEnhance ?? true,

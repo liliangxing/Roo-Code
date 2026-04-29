@@ -22,6 +22,8 @@ interface ApiConfigSelectorProps {
 	togglePinnedApiConfig: (id: string) => void
 	lockApiConfigAcrossModes: boolean
 	onToggleLockApiConfig: () => void
+	currentMode?: string
+	workspaceModeApiConfigs?: Record<string, string>
 }
 
 export const ApiConfigSelector = ({
@@ -36,6 +38,8 @@ export const ApiConfigSelector = ({
 	togglePinnedApiConfig,
 	lockApiConfigAcrossModes,
 	onToggleLockApiConfig,
+	currentMode,
+	workspaceModeApiConfigs,
 }: ApiConfigSelectorProps) => {
 	const { t } = useAppTranslation()
 	const [open, setOpen] = useState(false)
@@ -242,6 +246,39 @@ export const ApiConfigSelector = ({
 								className={lockApiConfigAcrossModes ? "text-vscode-focusBorder" : "opacity-60"}
 								onClick={onToggleLockApiConfig}
 							/>
+							{currentMode && (
+								<IconButton
+									iconClass={
+										workspaceModeApiConfigs?.[currentMode]
+											? "codicon-root-folder-opened"
+											: "codicon-root-folder"
+									}
+									title={
+										workspaceModeApiConfigs?.[currentMode]
+											? t("chat:clearWorkspaceProfile")
+											: t("chat:setWorkspaceProfile")
+									}
+									className={
+										workspaceModeApiConfigs?.[currentMode]
+											? "text-vscode-focusBorder"
+											: "opacity-60"
+									}
+									onClick={() => {
+										if (workspaceModeApiConfigs?.[currentMode]) {
+											vscode.postMessage({
+												type: "setWorkspaceModeApiConfig",
+												mode: currentMode,
+											})
+										} else {
+											vscode.postMessage({
+												type: "setWorkspaceModeApiConfig",
+												mode: currentMode,
+												text: value,
+											})
+										}
+									}}
+								/>
+							)}
 						</div>
 
 						{/* Info icon and title on the right with matching spacing */}

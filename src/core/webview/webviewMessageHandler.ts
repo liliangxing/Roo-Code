@@ -1650,6 +1650,37 @@ export const webviewMessageHandler = async (
 			break
 		}
 
+		case "setWorkspaceModeApiConfig": {
+			// Set a workspace-level mode-to-profile override.
+			// message.mode contains the mode slug, message.text contains the profile config ID.
+			const modeSlug = message.mode
+			const configId = message.text
+
+			if (modeSlug) {
+				const workspaceModeApiConfigs = provider.context.workspaceState.get<Record<string, string>>(
+					"workspaceModeApiConfigs",
+					{},
+				)
+
+				if (configId) {
+					workspaceModeApiConfigs[modeSlug] = configId
+				} else {
+					delete workspaceModeApiConfigs[modeSlug]
+				}
+
+				await provider.context.workspaceState.update("workspaceModeApiConfigs", workspaceModeApiConfigs)
+				await provider.postStateToWebview()
+			}
+			break
+		}
+
+		case "clearWorkspaceModeApiConfig": {
+			// Clear all workspace-level mode-to-profile overrides.
+			await provider.context.workspaceState.update("workspaceModeApiConfigs", {})
+			await provider.postStateToWebview()
+			break
+		}
+
 		case "toggleApiConfigPin":
 			if (message.text) {
 				const currentPinned = getGlobalState("pinnedApiConfigs") ?? {}

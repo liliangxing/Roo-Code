@@ -99,6 +99,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			cloudUserInfo,
 			enterBehavior,
 			lockApiConfigAcrossModes,
+			workspaceModeApiConfigs,
+			mode: currentMode,
 		} = useExtensionState()
 
 		// Find the ID and display text for the currently selected API configuration.
@@ -1319,6 +1321,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							togglePinnedApiConfig={togglePinnedApiConfig}
 							lockApiConfigAcrossModes={!!lockApiConfigAcrossModes}
 							onToggleLockApiConfig={handleToggleLockApiConfig}
+							currentMode={currentMode}
+							workspaceModeApiConfigs={workspaceModeApiConfigs}
 						/>
 						<AutoApproveDropdown triggerClassName="min-w-[28px] text-ellipsis overflow-hidden flex-shrink" />
 					</div>
