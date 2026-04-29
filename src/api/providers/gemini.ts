@@ -22,6 +22,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { convertAnthropicMessageToGemini } from "../transform/gemini-format"
+import { sanitizeSchemaForGemini } from "../transform/gemini-schema"
 import { t } from "i18next"
 import type { ApiStream, GroundingSource } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
@@ -137,7 +138,9 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				functionDeclarations: (metadata?.tools ?? []).map((tool) => ({
 					name: (tool as any).function.name,
 					description: (tool as any).function.description,
-					parametersJsonSchema: (tool as any).function.parameters,
+					parametersJsonSchema: sanitizeSchemaForGemini(
+						(tool as any).function.parameters as Record<string, unknown>,
+					),
 				})),
 			},
 		]
