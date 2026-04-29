@@ -101,6 +101,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			lockApiConfigAcrossModes,
 			workspaceModeApiConfigs,
 			mode: currentMode,
+			experiments,
 		} = useExtensionState()
 
 		// Find the ID and display text for the currently selected API configuration.
@@ -1323,6 +1324,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							onToggleLockApiConfig={handleToggleLockApiConfig}
 							currentMode={currentMode}
 							workspaceModeApiConfigs={workspaceModeApiConfigs}
+							enableWorkspaceOverrides={!!experiments?.workspaceProfileOverrides}
 						/>
 						<AutoApproveDropdown triggerClassName="min-w-[28px] text-ellipsis overflow-hidden flex-shrink" />
 					</div>

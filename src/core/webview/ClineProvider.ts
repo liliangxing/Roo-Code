@@ -56,7 +56,7 @@ import { findLast } from "../../shared/array"
 import { supportPrompt } from "../../shared/support-prompt"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
-import { experimentDefault } from "../../shared/experiments"
+import { experimentDefault, experiments as experimentsUtil, EXPERIMENT_IDS } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
 import { WebviewMessage } from "../../shared/WebviewMessage"
 import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
@@ -999,9 +999,15 @@ export class ClineProvider
 			const lockApiConfigAcrossModes = this.context.workspaceState.get("lockApiConfigAcrossModes", false)
 
 			if (!historyItem.apiConfigName && !lockApiConfigAcrossModes && !skipProfileRestoreFromHistory) {
-				// Check workspace-level override first, then fall back to global mode config.
-				const workspaceModeApiConfigs =
-					this.context.workspaceState.get<Record<string, string>>("workspaceModeApiConfigs") ?? {}
+				// Check workspace-level override first (if experiment enabled), then fall back to global mode config.
+				const { experiments: experimentsState } = await this.getState()
+				const workspaceOverridesEnabled = experimentsUtil.isEnabled(
+					experimentsState ?? experimentDefault,
+					EXPERIMENT_IDS.WORKSPACE_PROFILE_OVERRIDES,
+				)
+				const workspaceModeApiConfigs = workspaceOverridesEnabled
+					? (this.context.workspaceState.get<Record<string, string>>("workspaceModeApiConfigs") ?? {})
+					: {}
 				const workspaceConfigId = workspaceModeApiConfigs[historyItem.mode]
 				const savedConfigId =
 					workspaceConfigId ?? (await this.providerSettingsManager.getModeConfigId(historyItem.mode))
@@ -1438,9 +1444,15 @@ export class ClineProvider
 			return
 		}
 
-		// Check for workspace-level mode-to-profile override first, then fall back to global.
-		const workspaceModeApiConfigs =
-			this.context.workspaceState.get<Record<string, string>>("workspaceModeApiConfigs") ?? {}
+		// Check for workspace-level mode-to-profile override first (if experiment enabled), then fall back to global.
+		const { experiments: experimentsState } = await this.getState()
+		const workspaceOverridesEnabled = experimentsUtil.isEnabled(
+			experimentsState ?? experimentDefault,
+			EXPERIMENT_IDS.WORKSPACE_PROFILE_OVERRIDES,
+		)
+		const workspaceModeApiConfigs = workspaceOverridesEnabled
+			? (this.context.workspaceState.get<Record<string, string>>("workspaceModeApiConfigs") ?? {})
+			: {}
 		const workspaceConfigId = workspaceModeApiConfigs[newMode]
 
 		// Load the saved API config for the new mode if it exists.

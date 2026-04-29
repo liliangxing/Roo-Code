@@ -43,6 +43,7 @@ describe("webviewMessageHandler - setWorkspaceModeApiConfig", () => {
 				currentApiConfigName: "test-config",
 				listApiConfigMeta: [{ name: "test-config", id: "config-123" }],
 				customModes: [],
+				experiments: { workspaceProfileOverrides: true },
 			}),
 			postStateToWebview: vi.fn(),
 			providerSettingsManager: {
@@ -51,6 +52,23 @@ describe("webviewMessageHandler - setWorkspaceModeApiConfig", () => {
 			postMessageToWebview: vi.fn(),
 			getCurrentTask: vi.fn(),
 		}
+	})
+
+	it("does nothing when experiment is disabled", async () => {
+		mockProvider.getState.mockResolvedValueOnce({
+			currentApiConfigName: "test-config",
+			listApiConfigMeta: [{ name: "test-config", id: "config-123" }],
+			customModes: [],
+			experiments: { workspaceProfileOverrides: false },
+		})
+
+		await webviewMessageHandler(mockProvider as unknown as ClineProvider, {
+			type: "setWorkspaceModeApiConfig",
+			mode: "code",
+			text: "config-123",
+		})
+
+		expect(mockProvider.context.workspaceState.update).not.toHaveBeenCalled()
 	})
 
 	it("sets a workspace mode API config for a specific mode", async () => {

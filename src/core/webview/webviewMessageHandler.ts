@@ -47,7 +47,7 @@ import { MessageEnhancer } from "./messageEnhancer"
 
 import { CodeIndexManager } from "../../services/code-index/manager"
 import { checkExistKey } from "../../shared/checkExistApiConfig"
-import { experimentDefault } from "../../shared/experiments"
+import { experimentDefault, experiments as experimentsUtil, EXPERIMENT_IDS } from "../../shared/experiments"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { openFile } from "../../integrations/misc/open-file"
 import { openImage, saveImage } from "../../integrations/misc/image-handler"
@@ -1653,6 +1653,16 @@ export const webviewMessageHandler = async (
 		case "setWorkspaceModeApiConfig": {
 			// Set a workspace-level mode-to-profile override.
 			// message.mode contains the mode slug, message.text contains the profile config ID.
+			// Only proceed if the workspace profile overrides experiment is enabled.
+			const { experiments: expState } = await provider.getState()
+			const wsOverridesEnabled = experimentsUtil.isEnabled(
+				expState ?? experimentDefault,
+				EXPERIMENT_IDS.WORKSPACE_PROFILE_OVERRIDES,
+			)
+			if (!wsOverridesEnabled) {
+				break
+			}
+
 			const modeSlug = message.mode
 			const configId = message.text
 
