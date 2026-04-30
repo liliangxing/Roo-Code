@@ -45,7 +45,7 @@ describe("askFollowupQuestionTool", () => {
 
 		expect(mockCline.ask).toHaveBeenCalledWith(
 			"followup",
-			expect.stringContaining('"suggest":[{"answer":"Option 1"},{"answer":"Option 2"}]'),
+			expect.stringContaining('"suggest":[{"answer":"Option 1","mode":null},{"answer":"Option 2","mode":null}]'),
 			false,
 		)
 	})
@@ -105,7 +105,7 @@ describe("askFollowupQuestionTool", () => {
 		expect(mockCline.ask).toHaveBeenCalledWith(
 			"followup",
 			expect.stringContaining(
-				'"suggest":[{"answer":"Regular option"},{"answer":"Plan architecture","mode":"architect"}]',
+				'"suggest":[{"answer":"Regular option","mode":null},{"answer":"Plan architecture","mode":"architect"}]',
 			),
 			false,
 		)
@@ -189,7 +189,7 @@ describe("askFollowupQuestionTool", () => {
 			// Plain string should be coerced to [{ text: "not an array" }]
 			expect(mockCline.ask).toHaveBeenCalledWith(
 				"followup",
-				expect.stringContaining('"suggest":[{"answer":"not an array"}]'),
+				expect.stringContaining('"suggest":[{"answer":"not an array","mode":null}]'),
 				false,
 			)
 		})
@@ -217,7 +217,9 @@ describe("askFollowupQuestionTool", () => {
 			// JSON string should be parsed into a proper array
 			expect(mockCline.ask).toHaveBeenCalledWith(
 				"followup",
-				expect.stringContaining('"suggest":[{"answer":"Option A"},{"answer":"Option B","mode":"code"}]'),
+				expect.stringContaining(
+					'"suggest":[{"answer":"Option A","mode":null},{"answer":"Option B","mode":"code"}]',
+				),
 				false,
 			)
 		})
@@ -248,18 +250,32 @@ describe("askFollowupQuestionTool", () => {
 	})
 
 	describe("coerceFollowUp helper", () => {
-		it("should return arrays as-is", () => {
+		it("should normalize arrays to include mode: null when missing", () => {
 			const input = [{ text: "Option 1" }, { text: "Option 2" }]
-			expect(coerceFollowUp(input)).toEqual(input)
+			expect(coerceFollowUp(input)).toEqual([
+				{ text: "Option 1", mode: null },
+				{ text: "Option 2", mode: null },
+			])
+		})
+
+		it("should preserve existing mode values in arrays", () => {
+			const input = [{ text: "Option 1", mode: "code" }, { text: "Option 2" }]
+			expect(coerceFollowUp(input)).toEqual([
+				{ text: "Option 1", mode: "code" },
+				{ text: "Option 2", mode: null },
+			])
 		})
 
 		it("should parse a JSON string containing an array", () => {
 			const input = '[{"text":"A"},{"text":"B","mode":"code"}]'
-			expect(coerceFollowUp(input)).toEqual([{ text: "A" }, { text: "B", mode: "code" }])
+			expect(coerceFollowUp(input)).toEqual([
+				{ text: "A", mode: null },
+				{ text: "B", mode: "code" },
+			])
 		})
 
-		it("should wrap a plain string as a single suggestion", () => {
-			expect(coerceFollowUp("some option")).toEqual([{ text: "some option" }])
+		it("should wrap a plain string as a single suggestion with mode: null", () => {
+			expect(coerceFollowUp("some option")).toEqual([{ text: "some option", mode: null }])
 		})
 
 		it("should return undefined for null", () => {
@@ -278,9 +294,9 @@ describe("askFollowupQuestionTool", () => {
 			expect(coerceFollowUp("   ")).toBeUndefined()
 		})
 
-		it("should wrap a JSON string that parses to a non-array as a suggestion", () => {
+		it("should wrap a JSON string that parses to a non-array as a suggestion with mode: null", () => {
 			// A JSON string like '{"text":"hello"}' is valid JSON but not an array
-			expect(coerceFollowUp('{"text":"hello"}')).toEqual([{ text: '{"text":"hello"}' }])
+			expect(coerceFollowUp('{"text":"hello"}')).toEqual([{ text: '{"text":"hello"}', mode: null }])
 		})
 	})
 
@@ -400,7 +416,7 @@ describe("askFollowupQuestionTool", () => {
 					follow_up: Array<{ text: string; mode?: string }>
 				}
 				expect(nativeArgs.question).toBe("Pick one")
-				expect(nativeArgs.follow_up).toEqual([{ text: "Option A" }])
+				expect(nativeArgs.follow_up).toEqual([{ text: "Option A", mode: null }])
 			}
 		})
 
@@ -422,7 +438,10 @@ describe("askFollowupQuestionTool", () => {
 					follow_up: Array<{ text: string; mode?: string }>
 				}
 				expect(nativeArgs.question).toBe("Pick one")
-				expect(nativeArgs.follow_up).toEqual([{ text: "A" }, { text: "B" }])
+				expect(nativeArgs.follow_up).toEqual([
+					{ text: "A", mode: null },
+					{ text: "B", mode: null },
+				])
 			}
 		})
 	})

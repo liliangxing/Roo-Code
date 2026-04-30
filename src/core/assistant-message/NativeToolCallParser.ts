@@ -479,11 +479,18 @@ export class NativeToolCallParser {
 					if (!Array.isArray(coercedPartialFollowUp) && typeof coercedPartialFollowUp === "string") {
 						try {
 							const parsed = JSON.parse(coercedPartialFollowUp)
-							coercedPartialFollowUp = Array.isArray(parsed) ? parsed : undefined
+							coercedPartialFollowUp = Array.isArray(parsed)
+								? parsed.map((s: any) => ({ text: s.text, mode: s.mode ?? null }))
+								: undefined
 						} catch {
 							coercedPartialFollowUp = undefined
 						}
-					} else if (!Array.isArray(coercedPartialFollowUp)) {
+					} else if (Array.isArray(coercedPartialFollowUp)) {
+						coercedPartialFollowUp = coercedPartialFollowUp.map((s: any) => ({
+							text: s.text,
+							mode: s.mode ?? null,
+						}))
+					} else {
 						coercedPartialFollowUp = undefined
 					}
 					nativeArgs = {
@@ -837,11 +844,18 @@ export class NativeToolCallParser {
 							if (trimmed.length > 0) {
 								try {
 									const parsed = JSON.parse(trimmed)
-									coercedFinalFollowUp = Array.isArray(parsed) ? parsed : [{ text: trimmed }]
+									coercedFinalFollowUp = Array.isArray(parsed)
+										? parsed.map((s: any) => ({ text: s.text, mode: s.mode ?? null }))
+										: [{ text: trimmed, mode: null }]
 								} catch {
-									coercedFinalFollowUp = [{ text: trimmed }]
+									coercedFinalFollowUp = [{ text: trimmed, mode: null }]
 								}
 							}
+						} else if (Array.isArray(coercedFinalFollowUp)) {
+							coercedFinalFollowUp = coercedFinalFollowUp.map((s: any) => ({
+								text: s.text,
+								mode: s.mode ?? null,
+							}))
 						}
 						nativeArgs = {
 							question: args.question,

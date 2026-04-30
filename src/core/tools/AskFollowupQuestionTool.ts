@@ -6,7 +6,7 @@ import { BaseTool, ToolCallbacks } from "./BaseTool"
 
 interface Suggestion {
 	text: string
-	mode?: string
+	mode?: string | null
 }
 
 interface AskFollowupQuestionParams {
@@ -27,7 +27,7 @@ interface AskFollowupQuestionParams {
  */
 export function coerceFollowUp(value: unknown): Suggestion[] | undefined {
 	if (Array.isArray(value)) {
-		return value
+		return normalizeSuggestions(value)
 	}
 
 	if (typeof value === "string" && value.trim().length > 0) {
@@ -35,17 +35,29 @@ export function coerceFollowUp(value: unknown): Suggestion[] | undefined {
 		try {
 			const parsed = JSON.parse(value)
 			if (Array.isArray(parsed)) {
-				return parsed
+				return normalizeSuggestions(parsed)
 			}
 		} catch {
 			// Not valid JSON -- fall through to plain-string wrapping
 		}
 
 		// Wrap plain string as a single suggestion
-		return [{ text: value }]
+		return [{ text: value, mode: null }]
 	}
 
 	return undefined
+}
+
+/**
+ * Ensure every suggestion has an explicit `mode` field (defaulting to `null`).
+ * The tool schema requires `mode` on each item (`required: ["text", "mode"]`),
+ * and some model Jinja templates fail if a required field is absent.
+ */
+function normalizeSuggestions(items: Suggestion[]): Suggestion[] {
+	return items.map((s) => ({
+		text: s.text,
+		mode: s.mode ?? null,
+	}))
 }
 
 export class AskFollowupQuestionTool extends BaseTool<"ask_followup_question"> {
