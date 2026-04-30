@@ -39,6 +39,8 @@ import {
 	ImageGenerationProvider,
 } from "@roo-code/types"
 
+import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+
 import { vscode } from "@src/utils/vscode"
 import { cn } from "@src/lib/utils"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -203,6 +205,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		includeCurrentTime,
 		includeCurrentCost,
 		maxGitStatusFiles,
+		lockApiConfigAcrossModes,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -430,6 +433,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "debugSetting", bool: cachedState.debug })
+			vscode.postMessage({ type: "lockApiConfigAcrossModes", bool: lockApiConfigAcrossModes ?? false })
 
 			setChangeDetected(false)
 		}
@@ -766,6 +770,21 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 											})
 										}
 									/>
+									<div className="mt-2 mb-3">
+										<VSCodeCheckbox
+											checked={lockApiConfigAcrossModes ?? false}
+											onChange={(e: any) =>
+												setCachedStateField("lockApiConfigAcrossModes", e.target.checked)
+											}
+											data-testid="lock-api-config-across-modes-checkbox">
+											<span className="font-medium">
+												{t("settings:providers.lockApiConfigAcrossModes")}
+											</span>
+										</VSCodeCheckbox>
+										<div className="text-vscode-descriptionForeground text-sm mt-1 ml-5">
+											{t("settings:providers.lockApiConfigAcrossModesDescription")}
+										</div>
+									</div>
 									<ApiOptions
 										uriScheme={uriScheme}
 										apiConfiguration={apiConfiguration}
