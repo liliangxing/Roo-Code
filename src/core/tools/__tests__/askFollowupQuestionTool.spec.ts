@@ -1,4 +1,4 @@
-import { askFollowupQuestionTool } from "../AskFollowupQuestionTool"
+import { askFollowupQuestionTool, coerceFollowUp } from "../AskFollowupQuestionTool"
 import { ToolUse } from "../../../shared/tools"
 import { NativeToolCallParser } from "../../assistant-message/NativeToolCallParser"
 
@@ -166,7 +166,7 @@ describe("askFollowupQuestionTool", () => {
 			expect(mockCline.ask).not.toHaveBeenCalled()
 		})
 
-		it("should handle non-array follow_up parameter", async () => {
+		it("should coerce a plain string follow_up into a single-item array", async () => {
 			const block: ToolUse = {
 				type: "tool_use",
 				name: "ask_followup_question",
@@ -186,11 +186,101 @@ describe("askFollowupQuestionTool", () => {
 				pushToolResult: mockPushToolResult,
 			})
 
+			// Plain string should be coerced to [{ text: "not an array" }]
+			expect(mockCline.ask).toHaveBeenCalledWith(
+				"followup",
+				expect.stringContaining('"suggest":[{"answer":"not an array"}]'),
+				false,
+			)
+		})
+
+		it("should coerce a JSON string array follow_up into a proper array", async () => {
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "ask_followup_question",
+				params: {
+					question: "What would you like to do?",
+				},
+				nativeArgs: {
+					question: "What would you like to do?",
+					follow_up: '[{"text":"Option A"},{"text":"Option B","mode":"code"}]' as any,
+				} as any,
+				partial: false,
+			}
+
+			await askFollowupQuestionTool.handle(mockCline, block as ToolUse<"ask_followup_question">, {
+				askApproval: vi.fn(),
+				handleError: vi.fn(),
+				pushToolResult: mockPushToolResult,
+			})
+
+			// JSON string should be parsed into a proper array
+			expect(mockCline.ask).toHaveBeenCalledWith(
+				"followup",
+				expect.stringContaining('"suggest":[{"answer":"Option A"},{"answer":"Option B","mode":"code"}]'),
+				false,
+			)
+		})
+
+		it("should handle number follow_up parameter as missing", async () => {
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "ask_followup_question",
+				params: {
+					question: "What would you like to do?",
+				},
+				nativeArgs: {
+					question: "What would you like to do?",
+					follow_up: 42 as any,
+				} as any,
+				partial: false,
+			}
+
+			await askFollowupQuestionTool.handle(mockCline, block as ToolUse<"ask_followup_question">, {
+				askApproval: vi.fn(),
+				handleError: vi.fn(),
+				pushToolResult: mockPushToolResult,
+			})
+
 			expect(mockCline.sayAndCreateMissingParamError).toHaveBeenCalledWith("ask_followup_question", "follow_up")
-			expect(mockCline.recordToolError).toHaveBeenCalledWith("ask_followup_question")
-			expect(mockCline.didToolFailInCurrentTurn).toBe(true)
-			expect(mockCline.consecutiveMistakeCount).toBe(1)
 			expect(mockCline.ask).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("coerceFollowUp helper", () => {
+		it("should return arrays as-is", () => {
+			const input = [{ text: "Option 1" }, { text: "Option 2" }]
+			expect(coerceFollowUp(input)).toEqual(input)
+		})
+
+		it("should parse a JSON string containing an array", () => {
+			const input = '[{"text":"A"},{"text":"B","mode":"code"}]'
+			expect(coerceFollowUp(input)).toEqual([{ text: "A" }, { text: "B", mode: "code" }])
+		})
+
+		it("should wrap a plain string as a single suggestion", () => {
+			expect(coerceFollowUp("some option")).toEqual([{ text: "some option" }])
+		})
+
+		it("should return undefined for null", () => {
+			expect(coerceFollowUp(null)).toBeUndefined()
+		})
+
+		it("should return undefined for undefined", () => {
+			expect(coerceFollowUp(undefined)).toBeUndefined()
+		})
+
+		it("should return undefined for empty string", () => {
+			expect(coerceFollowUp("")).toBeUndefined()
+		})
+
+		it("should return undefined for whitespace-only string", () => {
+			expect(coerceFollowUp("   ")).toBeUndefined()
+		})
+
+		it("should wrap a JSON string that parses to a non-array as a suggestion", () => {
+			// A JSON string like '{"text":"hello"}' is valid JSON but not an array
+			expect(coerceFollowUp('{"text":"hello"}')).toEqual([{ text: '{"text":"hello"}' }])
 		})
 	})
 
@@ -290,6 +380,49 @@ describe("askFollowupQuestionTool", () => {
 						{ text: "No", mode: null },
 					],
 				})
+			}
+		})
+
+		it("should coerce string follow_up to array during finalization", () => {
+			NativeToolCallParser.startStreamingToolCall("call_789", "ask_followup_question")
+
+			// Simulate a model that outputs follow_up as a plain string
+			const jsonWithStringFollowUp = '{"question":"Pick one","follow_up":"Option A"}'
+			NativeToolCallParser.processStreamingChunk("call_789", jsonWithStringFollowUp)
+
+			const result = NativeToolCallParser.finalizeStreamingToolCall("call_789")
+
+			expect(result).not.toBeNull()
+			expect(result?.type).toBe("tool_use")
+			if (result?.type === "tool_use") {
+				const nativeArgs = result.nativeArgs as {
+					question: string
+					follow_up: Array<{ text: string; mode?: string }>
+				}
+				expect(nativeArgs.question).toBe("Pick one")
+				expect(nativeArgs.follow_up).toEqual([{ text: "Option A" }])
+			}
+		})
+
+		it("should coerce JSON-string follow_up to array during finalization", () => {
+			NativeToolCallParser.startStreamingToolCall("call_101", "ask_followup_question")
+
+			// Simulate a model that outputs follow_up as a JSON string of an array
+			const jsonWithJsonStringFollowUp =
+				'{"question":"Pick one","follow_up":"[{\\"text\\":\\"A\\"},{\\"text\\":\\"B\\"}]"}'
+			NativeToolCallParser.processStreamingChunk("call_101", jsonWithJsonStringFollowUp)
+
+			const result = NativeToolCallParser.finalizeStreamingToolCall("call_101")
+
+			expect(result).not.toBeNull()
+			expect(result?.type).toBe("tool_use")
+			if (result?.type === "tool_use") {
+				const nativeArgs = result.nativeArgs as {
+					question: string
+					follow_up: Array<{ text: string; mode?: string }>
+				}
+				expect(nativeArgs.question).toBe("Pick one")
+				expect(nativeArgs.follow_up).toEqual([{ text: "A" }, { text: "B" }])
 			}
 		})
 	})
