@@ -217,7 +217,7 @@ export class MultiSearchReplaceDiffStrategy implements DiffStrategy {
 					if (marker === REPLACE) return reportInvalidDiffError(REPLACE, SEP)
 					if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					// Detect malformed separator: `-------` with content on the same line (missing newline)
-					if (/^-------\S/.test(marker)) {
+					if (/^-------.+/.test(marker)) {
 						const trailingContent = marker.slice(7)
 						return {
 							success: false,

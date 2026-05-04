@@ -155,6 +155,21 @@ describe("MultiSearchReplaceDiffStrategy", () => {
 			expect(result.error).toContain("some content here")
 		})
 
+		it("detects malformed separator with whitespace (tab) before content on the same line", () => {
+			const diff =
+				"<<<<<<< SEARCH\n" +
+				":start_line:70\n" +
+				"-------\tapi.POST(\n" +
+				"=======\n" +
+				"new content\n" +
+				">>>>>>> REPLACE"
+			const result = strategy["validateMarkerSequencing"](diff)
+			expect(result.success).toBe(false)
+			expect(result.error).toContain("separator line '-------'")
+			expect(result.error).toContain("must be on its own line")
+			expect(result.error).toContain("\tapi.POST(")
+		})
+
 		it("allows properly formatted separator on its own line", () => {
 			const diff =
 				"<<<<<<< SEARCH\n" +
