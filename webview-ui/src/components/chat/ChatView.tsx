@@ -203,7 +203,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	// Compute whether auto-approval is paused (user is typing in a followup)
 	const isFollowUpAutoApprovalPaused = useMemo(() => {
-		return !!(inputValue && inputValue.trim().length > 0 && clineAsk === "followup")
+		return !!(inputValue && (inputValue ?? "").trim().length > 0 && clineAsk === "followup")
 	}, [inputValue, clineAsk])
 
 	// Cancel auto-approval timeout when user starts typing
@@ -710,7 +710,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	// Handle enqueue button click from textarea
 	const handleEnqueueCurrentMessage = useCallback(() => {
-		const text = inputValue.trim()
+		const text = (inputValue ?? "").trim()
 		if (text || selectedImages.length > 0) {
 			vscode.postMessage({
 				type: "queueMessage",
@@ -1536,12 +1536,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	useImperativeHandle(ref, () => ({
 		acceptInput: () => {
-			const hasInput = inputValue.trim() || selectedImages.length > 0
+			const hasInput = (inputValue ?? "").trim() || selectedImages.length > 0
 
 			// Special case: during command_output, queue the message instead of
 			// triggering the primary button action (which would lose the message)
 			if (clineAskRef.current === "command_output" && hasInput) {
-				vscode.postMessage({ type: "queueMessage", text: inputValue.trim(), images: selectedImages })
+				vscode.postMessage({ type: "queueMessage", text: (inputValue ?? "").trim(), images: selectedImages })
 				setInputValue("")
 				setSelectedImages([])
 				return
