@@ -1,4 +1,5 @@
 {
+  "_description": "Requires: npm install -g @agnuxo/p2pclaw-mcp-server (see https://github.com/Agnuxo1/p2pclaw-mcp-server)",
   "mcpServers": {
     "p2pclaw": {
       "command": "npx",

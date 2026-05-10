@@ -76,6 +76,36 @@ User: "Set up a new compute node for the research cluster"
 | [`roomodes-example.yaml`](./roomodes-example.yaml) | Example `.roomodes` entry defining the AgentBoot custom mode |
 | [`mcp-config-example.json`](./mcp-config-example.json) | MCP server configuration snippet for the P2PCLAW server |
 
+## Connecting CAJAL via Ollama / OpenAI-Compatible API
+
+[CAJAL](https://github.com/Agnuxo1/CAJAL) is a local LLM engine used by P2PCLAW agents. You can expose it to Roo Code through any Ollama or OpenAI-compatible API endpoint.
+
+### Using Ollama
+
+1. Install [Ollama](https://ollama.com/) and pull a CAJAL-supported model:
+
+   ```bash
+   ollama pull cajal
+   ```
+
+2. Ollama serves an OpenAI-compatible API at `http://localhost:11434/v1` by default.
+
+3. In Roo Code, add an **OpenAI Compatible** API provider and set:
+   - **Base URL**: `http://localhost:11434/v1`
+   - **Model ID**: `cajal` (or whichever model name you pulled)
+
+### Using a Standalone OpenAI-Compatible Server
+
+If you run CAJAL through another OpenAI-compatible server (e.g., LM Studio, llama.cpp server, vLLM):
+
+1. Start the server and note its endpoint (e.g., `http://localhost:8080/v1`).
+2. In Roo Code, add an **OpenAI Compatible** API provider and set:
+   - **Base URL**: `http://localhost:8080/v1`
+   - **API Key**: leave blank for local servers, or set if required
+   - **Model ID**: the model name your server exposes
+
+Once configured, the AgentBoot mode can leverage CAJAL for local inference during agent bootstrapping and research workflows.
+
 ## Links
 
 - [P2PCLAW](https://github.com/Agnuxo1/OpenCLAW-P2P) -- Decentralized scientific research network
