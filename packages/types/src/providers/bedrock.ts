@@ -167,7 +167,7 @@ export const bedrockModels = {
 			},
 		],
 	},
-	"anthropic.claude-opus-4-7-v1": {
+	"anthropic.claude-opus-4-7": {
 		maxTokens: 8192,
 		contextWindow: 200_000, // Default 200K, extendable to 1M with beta flag 'context-1m-2025-08-07'
 		supportsImages: true,
@@ -549,7 +549,7 @@ export const BEDROCK_1M_CONTEXT_MODEL_IDS = [
 	"anthropic.claude-sonnet-4-5-20250929-v1:0",
 	"anthropic.claude-sonnet-4-6",
 	"anthropic.claude-opus-4-6-v1",
-	"anthropic.claude-opus-4-7-v1",
+	"anthropic.claude-opus-4-7",
 ] as const
 
 // Amazon Bedrock models that support Global Inference profiles
@@ -568,7 +568,7 @@ export const BEDROCK_GLOBAL_INFERENCE_MODEL_IDS = [
 	"anthropic.claude-haiku-4-5-20251001-v1:0",
 	"anthropic.claude-opus-4-5-20251101-v1:0",
 	"anthropic.claude-opus-4-6-v1",
-	"anthropic.claude-opus-4-7-v1",
+	"anthropic.claude-opus-4-7",
 ] as const
 
 // Amazon Bedrock Service Tier types
