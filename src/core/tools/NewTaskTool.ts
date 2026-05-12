@@ -29,8 +29,8 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 	async execute(params: NewTaskParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { mode, message, todos, task_queue, permissions: permissionsJson, background } = params
 		const { mode, message, todos, background } = params
+		const { mode, message, todos } = params
 		const { askApproval, handleError, pushToolResult } = callbacks
-		const isBackground = background === "true"
 
 		try {
 			// Validate required parameters.
@@ -68,8 +68,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 
 			// Check if todos are required based on VSCode setting.
 			// Note: `undefined` means not provided, empty string is valid.
-			// Background tasks don't require todos (they're read-only).
-			if (requireTodos && todos === undefined && !isBackground) {
+			if (requireTodos && todos === undefined) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
 				task.didToolFailInCurrentTurn = true
@@ -180,29 +179,6 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 			const didApprove = await askApproval("tool", toolMessage)
 
 			if (!didApprove) {
-				return
-			}
-
-			if (isBackground) {
-				// Spawn as a background task - parent continues executing
-				try {
-					const bgTask = await (provider as any).spawnBackgroundTask({
-						parentTaskId: task.taskId,
-						message: unescapedMessage,
-						mode,
-					})
-					pushToolResult(
-						`Background task ${bgTask.taskId} spawned in ${targetMode.name} mode. ` +
-							`It will run concurrently with read-only tools. ` +
-							`Results will be delivered when it completes.`,
-					)
-				} catch (error) {
-					pushToolResult(
-						formatResponse.toolError(
-							`Failed to spawn background task: ${error instanceof Error ? error.message : String(error)}`,
-						),
-					)
-				}
 				return
 			}
 

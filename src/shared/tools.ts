@@ -107,6 +107,7 @@ export type NativeToolArgs = {
 	list_files: { path: string; recursive?: boolean }
 	new_task: { mode: string; message: string; todos?: string; task_queue?: string; permissions?: string }
 	new_task: { mode: string; message: string; todos?: string; background?: string }
+	new_task: { mode: string; message: string; todos?: string }
 	ask_followup_question: {
 		question: string
 		follow_up: Array<{ text: string; mode?: string }>
@@ -247,6 +248,7 @@ export interface NewTaskToolUse extends ToolUse<"new_task"> {
 	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos" | "task_queue">>
 	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos" | "permissions">>
 	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos" | "background">>
+	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos">>
 }
 
 export interface RunSlashCommandToolUse extends ToolUse<"run_slash_command"> {

@@ -49,7 +49,7 @@ export default {
 					description: BACKGROUND_PARAMETER_DESCRIPTION,
 				},
 			},
-			required: ["mode", "message", "todos", "background"],
+			required: ["mode", "message", "todos"],
 			additionalProperties: false,
 		},
 	},

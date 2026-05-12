@@ -149,21 +149,6 @@ export class ClineProvider
 	private recentTasksCache?: string[]
 	public readonly taskHistoryStore: TaskHistoryStore
 	private taskHistoryStoreInitialized = false
-	public readonly backgroundTaskRunner: BackgroundTaskRunner = (() => {
-		const runner = new BackgroundTaskRunner(undefined, undefined, {
-			onTaskTimeout: (taskId: string, _parentTaskId: string) => {
-				vscode.window.showWarningMessage(`Background task ${taskId} timed out and was cancelled.`)
-			},
-			onTaskError: (taskId, _parentTaskId, error) => {
-				vscode.window.showWarningMessage(`Background task ${taskId} encountered an error: ${error.message}`)
-			},
-		})
-		runner.onStateChanged = () => {
-			// Push updated background task status to the webview whenever tasks change
-			this.postBackgroundTasksToWebview()
-		}
-		return runner
-	})()
 	private globalStateWriteThroughTimer: ReturnType<typeof setTimeout> | null = null
 	private static readonly GLOBAL_STATE_WRITE_THROUGH_DEBOUNCE_MS = 5000 // 5 seconds
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -181,6 +166,8 @@ export class ClineProvider
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
+	/** The background task ID the webview is currently viewing (for Phase 6c progress streaming). */
+	public viewedBackgroundTaskId: string | null = null
 	public readonly latestAnnouncementId = "apr-2026-v3.53.0-community-handoff-gpt55-opus47" // v3.53.0 Community handoff, GPT-5.5, Claude Opus 4.7, checkpoint navigation
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
@@ -672,10 +659,6 @@ export class ClineProvider
 
 		this._disposed = true
 		this.log("Disposing ClineProvider...")
-
-		// Cancel all background tasks first.
-		await this.backgroundTaskRunner.dispose()
-		this.log("Disposed background task runner")
 
 		// Clear all tasks from the stack.
 		while (this.clineStack.length > 0) {
@@ -1970,19 +1953,6 @@ export class ClineProvider
 	}
 
 	/**
-	 * Push only the background tasks status to the webview.
-	 * This is a lightweight update triggered by BackgroundTaskRunner.onStateChanged
-	 * so the UI can refresh the panel without a full state push.
-	 */
-	postBackgroundTasksToWebview(): void {
-		const backgroundTasks = this.backgroundTaskRunner.getTasksStatus()
-		this.postMessageToWebview({
-			type: "state",
-			state: { backgroundTasks } as any,
-		})
-	}
-
-	/**
 	 * Like postStateToWebview but intentionally omits taskHistory.
 	 *
 	 * Rationale:
@@ -2300,7 +2270,6 @@ export class ClineProvider
 				}
 			})(),
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
-			backgroundTasks: this.backgroundTaskRunner.getTasksStatus(),
 		}
 	}
 
@@ -3201,131 +3170,6 @@ export class ClineProvider
 		}
 
 		return child
-	}
-
-	/**
-	 * Spawn a background task that runs concurrently alongside the foreground task.
-	 * Background tasks are:
-	 * - Completely webview-silent (no UI updates)
-	 * - Auto-approved for all tool uses (no user interaction)
-	 * - Restricted to read-only tools only
-	 * - Tracked by the BackgroundTaskRunner with timeout enforcement
-	 *
-	 * The parent task continues executing while the background task runs.
-	 * Results are delivered asynchronously via the onBackgroundComplete callback.
-	 */
-	public async spawnBackgroundTask(params: { parentTaskId: string; message: string; mode: string }): Promise<Task> {
-		const { parentTaskId, message, mode } = params
-
-		if (!this.backgroundTaskRunner.canAcceptTask) {
-			throw new Error(
-				`[spawnBackgroundTask] Cannot spawn background task: concurrency limit reached ` +
-					`(${this.backgroundTaskRunner.activeCount} active)`,
-			)
-		}
-
-		// Get parent task for lineage
-		const parent = this.getCurrentTask()
-		if (!parent || parent.taskId !== parentTaskId) {
-			throw new Error(`[spawnBackgroundTask] Parent task mismatch or not found: ${parentTaskId}`)
-		}
-
-		const { apiConfiguration, experiments } = await this.getState()
-
-		// Switch mode for the background task's context
-		const savedMode = (await this.getState()).mode
-
-		try {
-			await this.handleModeSwitch(mode as any)
-		} catch (e) {
-			this.log(
-				`[spawnBackgroundTask] handleModeSwitch failed for mode '${mode}': ${
-					(e as Error)?.message ?? String(e)
-				}`,
-			)
-		}
-
-		// Create the background task - NOT added to clineStack
-		const backgroundTask = new Task({
-			provider: this,
-			apiConfiguration,
-			task: message,
-			experiments,
-			rootTask: this.clineStack.length > 0 ? this.clineStack[0] : undefined,
-			parentTask: parent,
-			taskNumber: -1, // Background tasks don't get a sequential number
-			isBackgroundTask: true,
-			enableCheckpoints: false, // Read-only tasks have nothing to checkpoint
-			startTask: false,
-			initialStatus: "active",
-			onBackgroundComplete: (taskId: string, result: string) => {
-				this.handleBackgroundTaskComplete(taskId, result)
-			},
-		})
-
-		// Restore the original mode for the foreground task
-		try {
-			await this.handleModeSwitch(savedMode as any)
-		} catch (e) {
-			this.log(
-				`[spawnBackgroundTask] Failed to restore mode '${savedMode}': ${(e as Error)?.message ?? String(e)}`,
-			)
-		}
-
-		// Register with the background task runner (handles timeout, tracking)
-		this.backgroundTaskRunner.registerTask(backgroundTask, parentTaskId)
-
-		// Start the task (it will auto-approve all tools and skip webview updates)
-		backgroundTask.start()
-
-		this.log(
-			`[spawnBackgroundTask] Background task ${backgroundTask.taskId} spawned ` +
-				`(parent: ${parentTaskId}, mode: ${mode})`,
-		)
-
-		return backgroundTask
-	}
-
-	/**
-	 * Handle completion of a background task. Injects the result into the parent
-	 * task's API conversation as a system message.
-	 */
-	private async handleBackgroundTaskComplete(taskId: string, result: string): Promise<void> {
-		const info = this.backgroundTaskRunner.onTaskCompleted(taskId, result)
-
-		if (!info) {
-			this.log(`[handleBackgroundTaskComplete] Task ${taskId} not found in background runner`)
-			return
-		}
-
-		// Notify the user that the background task finished.
-		vscode.window.showInformationMessage(`Background task ${taskId} completed.`)
-
-		const parentTaskId = info.parentTaskId
-		const currentTask = this.getCurrentTask()
-
-		// If the parent is currently the foreground task, inject the result directly
-		if (currentTask && currentTask.taskId === parentTaskId) {
-			const resultMessage = [`Background task ${taskId} completed.`, ``, `Result:`, result].join("\n")
-
-			// Inject as a system-level message into the parent's conversation
-			try {
-				await currentTask.say("subtask_result", resultMessage)
-			} catch (error) {
-				this.log(
-					`[handleBackgroundTaskComplete] Failed to inject result into parent ${parentTaskId}: ${
-						error instanceof Error ? error.message : String(error)
-					}`,
-				)
-			}
-		} else {
-			// Parent is not the current foreground task (e.g., it was delegated).
-			// Store the result for later retrieval when the parent resumes.
-			this.log(
-				`[handleBackgroundTaskComplete] Parent ${parentTaskId} is not foreground. ` +
-					`Background task ${taskId} result will not be injected automatically.`,
-			)
-		}
 	}
 
 	/**
