@@ -168,14 +168,16 @@ BackgroundTaskReplayView
 
 #### UI Structure
 
+A new icon is added to the existing tab bar (alongside chat, history, settings) as the entry point. The background task view occupies the full tab area.
+
 ```
 App.tsx
 ├── tab === "chat"     → ChatView (foreground task)
 ├── tab === "history"  → HistoryView
 ├── tab === "settings" → SettingsView
 └── tab === "bgTask"   → BackgroundTaskView
-    ├── BackgroundTasksList (sidebar/panel)
-    │   ├── Active tasks with status badges
+    ├── BackgroundTasksList (task list with status badges + error badge on tab icon)
+    │   ├── Active tasks
     │   └── Completed tasks
     └── BackgroundTaskReplayView (from 6a) OR BackgroundTaskLiveView (from 6c)
 ```
@@ -192,7 +194,7 @@ interface BackgroundTaskViewState {
 
 #### Navigation Flow
 
-1. User clicks background task icon/tab
+1. User clicks background tasks icon in the tab bar
 2. App switches to `tab === "bgTask"`
 3. BackgroundTasksList shows available tasks
 4. User clicks a task → sets `selectedTaskId`
@@ -280,6 +282,8 @@ BackgroundTaskLiveView
 
 The live view intentionally shows a compact summary, not a full chat transcript. Users who want full detail can wait for the task to complete and use the replay view (6a).
 
+> **Confirmed:** Streaming is scoped to the currently selected background task only. The extension should not emit `backgroundTaskProgress` messages for tasks the user is not viewing. This keeps message traffic low and the implementation simple.
+
 ## 7. Testing Strategy
 
 | Area | Test Type | Key Scenarios |
@@ -290,71 +294,34 @@ The live view intentionally shows a compact summary, not a full chat transcript.
 | Progress streaming | Unit (vitest) | Throttling, batching, concurrent tasks |
 | Integration | E2E (if feasible) | Full flow: start bg task → view progress → replay after completion |
 
-## 8. Open Questions
+## 8. Confirmed Decisions
 
-The following questions need alignment before implementation begins. They are grouped by area and ordered by impact.
+The following decisions were confirmed during design review and should guide implementation.
 
 ### UI Layout
 
-1. **Should the background task list be a sidebar panel or a tab?**
+1. **Background task view layout: Full tab** (`tab === "bgTask"`)
 
-   | Option | Pros | Cons |
-   |--------|------|------|
-   | **Sidebar panel** (like Phase 5 panel) | Foreground task stays visible; quick glance at background status without context-switching | More complex layout; may feel cramped in narrow viewports |
-   | **Full tab** (`tab === "bgTask"`) | Simpler implementation; full width for task details | Replaces the current view entirely; user loses sight of foreground task |
-   | **Hybrid** (collapsible sidebar that can expand to full view) | Best of both worlds | Highest implementation effort |
+   Start with a full tab for simplicity in Phase 6. A sidebar/hybrid mode may be considered later based on user feedback.
 
-   **Recommendation:** Start with a full tab for simplicity. If user feedback indicates they need to monitor background tasks while interacting with the foreground task, add a sidebar mode in a follow-up.
+2. **Entry point placement: New tab bar icon**
 
-   **Decision needed:** Which option should we ship first?
+   Add a new icon in the existing tab bar (alongside chat, history, settings). This is the most discoverable location without cluttering the chat view.
 
-2. **Where does the "background tasks" entry point live?**
+3. **Replay view implementation: Thin wrapper around ChatRow components**
 
-   Options:
-   - A new icon in the existing tab bar (alongside chat, history, settings)
-   - A badge/button on the status area of the chat view
-   - An entry in the history view with a filter for background tasks
+   Create a dedicated `BackgroundTaskReplayView` that wraps `ChatRow` components directly rather than reusing the full `ChatView`. This avoids inheriting input controls, scroll management, and approval button logic that don't apply to read-only replay.
 
-   **Decision needed:** Which placement feels most discoverable without adding clutter?
+### Progress Streaming (6c)
 
-3. **Should the replay view share the ChatView component or be a separate component?**
+4. **Streaming granularity: Minimal level**
 
-   Reusing `ChatView` with a read-only prop reduces duplication but may introduce coupling. A dedicated `BackgroundTaskReplayView` is more isolated but duplicates rendering logic.
+   Stream tool name + status only (started/completed/errored). This provides enough signal to know what the background task is doing without performance risk. Truncated arguments (medium level) can be added in a follow-up if users need more context.
 
-   **Recommendation:** Create a thin wrapper around `ChatRow` components rather than reusing the full `ChatView`. This avoids inheriting input controls, scroll management, and approval button logic that don't apply.
+5. **Streaming scope: Currently selected task only**
 
-### Progress Streaming Granularity
+   Only stream updates for the background task the user is currently viewing. This avoids unnecessary message traffic and keeps the implementation simple.
 
-4. **What level of detail should the MVP stream?**
+6. **Error surfacing: Badge on the background tasks tab icon**
 
-   | Level | What's shown | Bandwidth / perf cost |
-   |-------|-------------|----------------------|
-   | **Minimal** (recommended for MVP) | Tool name + status (started/completed/errored) | Very low |
-   | **Medium** | Tool name + truncated first argument (e.g., file path) | Low |
-   | **Full** | Complete tool parameters + output | High -- requires careful truncation |
-
-   **Recommendation:** Ship with minimal level. The tool name and status provide enough signal to know "what the background task is doing right now" without performance risk. Medium level can be added as a fast follow if users want more context.
-
-   **Decision needed:** Is the minimal level sufficient, or should we target medium from the start?
-
-5. **Should streaming updates be opt-in?**
-
-   If multiple background tasks are running, streaming all of them simultaneously could be noisy. Options:
-   - Stream all tasks by default, throttle aggressively
-   - Only stream updates for the currently-viewed background task
-   - Let users toggle streaming per task
-
-   **Recommendation:** Only stream updates for the currently-viewed background task (the one selected in the background task list). This keeps the implementation simple and avoids unnecessary message traffic.
-
-   **Decision needed:** Confirm this approach or choose an alternative.
-
-6. **How should errors in background tasks be surfaced?**
-
-   When a background task hits an error, the user may not notice if they're focused on the foreground task. Options:
-   - Badge/notification on the background tasks tab icon
-   - Toast notification
-   - Both
-
-   **Recommendation:** Badge on the tab icon (low disruption). Toast notifications can be added later if users miss errors.
-
-   **Decision needed:** Is a badge sufficient, or do we need more prominent notification?
+   Display a badge on the tab icon when a background task encounters an error. Toast notifications can be added later if users miss errors.
