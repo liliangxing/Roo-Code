@@ -1193,6 +1193,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				mode: this._taskMode || defaultModeSlug, // Use the task's own mode, not the current provider mode.
 				apiConfigName: this._taskApiConfigName, // Use the task's own provider profile, not the current provider profile.
 				initialStatus: this.initialStatus,
+				// Persist the serializable (input) permission fields so they survive restarts.
+				// Internal layer fields (_filePatternLayers, _commandPatternLayers) are
+				// recomputed from the flat fields via toTaskPermissions() on restore.
+				taskPermissions: this.taskPermissions
+					? {
+							filePatterns: this.taskPermissions.filePatterns,
+							commandPatterns: this.taskPermissions.commandPatterns,
+							allowedTools: this.taskPermissions.allowedTools,
+							deniedTools: this.taskPermissions.deniedTools,
+						}
+					: undefined,
 			})
 
 			// Emit token/tool usage updates using debounced function

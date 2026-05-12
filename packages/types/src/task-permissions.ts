@@ -9,18 +9,67 @@ import { z } from "zod"
  * more access than its parent.
  */
 
-/** Zod refinement that rejects strings which are not valid regular expressions. */
-const regexString = z.string().refine(
-	(val) => {
-		try {
-			new RegExp(val)
-			return true
-		} catch {
-			return false
-		}
-	},
-	{ message: "Invalid regular expression" },
-)
+/**
+ * Maximum allowed length for a regex pattern string.
+ * Keeps patterns short to limit the surface area for ReDoS.
+ */
+const MAX_REGEX_LENGTH = 500
+
+/**
+ * Heuristic check for ReDoS-prone regex patterns.
+ *
+ * Detects common dangerous constructs:
+ * - Nested quantifiers: `(a+)+`, `(a*)*`, `(a+)*`, `(a{1,})+` etc.
+ * - Overlapping alternation with quantifiers that can cause exponential backtracking
+ *
+ * This is a conservative heuristic -- it may reject some safe patterns,
+ * but it will catch the most common ReDoS vectors.
+ *
+ * @returns `true` if the pattern appears safe, `false` if it looks dangerous.
+ */
+export function isSafeRegex(pattern: string): boolean {
+	if (pattern.length > MAX_REGEX_LENGTH) {
+		return false
+	}
+
+	// Detect nested quantifiers: a group/char-class followed by a quantifier,
+	// itself followed by another quantifier.
+	// e.g., (a+)+  (\w+)*  [a-z]+*  (.+){2,}+
+	// Pattern: something quantified inside a group, then the group is quantified again.
+	// We look for `)` followed by a quantifier, preceded by content that also has a quantifier.
+	const nestedQuantifierRe = /(\+|\*|\?|\{[0-9,]+\})\s*\)(\+|\*|\?|\{[0-9,]+\})/
+	if (nestedQuantifierRe.test(pattern)) {
+		return false
+	}
+
+	// Detect star-height > 1 patterns like (.+)+  (.*)*  (.+)*
+	const starHeightRe = /\(([^)]*(\+|\*|\{[0-9,]+\})[^)]*)\)(\+|\*|\{[0-9,]+\})/
+	if (starHeightRe.test(pattern)) {
+		return false
+	}
+
+	return true
+}
+
+/** Zod refinement that rejects strings which are not valid regular expressions
+ *  or that contain potentially dangerous ReDoS patterns. */
+const regexString = z
+	.string()
+	.refine(
+		(val) => {
+			try {
+				new RegExp(val)
+				return true
+			} catch {
+				return false
+			}
+		},
+		{ message: "Invalid regular expression" },
+	)
+	.refine((val) => isSafeRegex(val), {
+		message:
+			"Regex pattern is potentially unsafe (nested quantifiers or excessive length). Simplify the pattern to avoid ReDoS risk.",
+	})
 
 export const taskPermissionsSchema = z.object({
 	/**
@@ -188,6 +237,11 @@ function collectPatternLayers(
 export function matchesAnyPattern(value: string, patterns: string[]): boolean {
 	return patterns.some((pattern) => {
 		try {
+			// Skip patterns that fail the safety heuristic at runtime
+			// (belt-and-suspenders: Zod schema also checks at parse time)
+			if (!isSafeRegex(pattern)) {
+				return false
+			}
 			// Anchor patterns so they must match the entire value, not a substring.
 			// This prevents "src/.*" from matching "evil/src/foo".
 			const anchored = pattern.startsWith("^") ? pattern : `^(?:${pattern})$`

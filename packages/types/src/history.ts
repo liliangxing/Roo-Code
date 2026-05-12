@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { taskPermissionsSchema } from "./task-permissions.js"
+
 /**
  * HistoryItem
  */
@@ -26,6 +28,9 @@ export const historyItemSchema = z.object({
 	awaitingChildId: z.string().optional(), // Child currently awaited (set when delegated)
 	completedByChildId: z.string().optional(), // Child that completed and resumed this parent
 	completionResultSummary: z.string().optional(), // Summary from completed child
+	/** Persisted task permissions set by parent via new_task tool.
+	 *  Allows permissions to survive VS Code restarts for subtasks. */
+	taskPermissions: taskPermissionsSchema.optional(),
 })
 
 export type HistoryItem = z.infer<typeof historyItemSchema>

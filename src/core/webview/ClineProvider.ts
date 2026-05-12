@@ -82,7 +82,7 @@ import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import type { ClineMessage, TodoItem, TaskPermissions } from "@roo-code/types"
+import { toTaskPermissions, type ClineMessage, type TodoItem, type TaskPermissions } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages, TaskHistoryStore } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
 import { getNonce } from "./getNonce"
@@ -953,6 +953,10 @@ export class ClineProvider
 			startTask: options?.startTask ?? true,
 			// Preserve the status from the history item to avoid overwriting it when the task saves messages
 			initialStatus: historyItem.status,
+			// Restore persisted task permissions from history so they survive VS Code restarts.
+			// toTaskPermissions() converts the flat input fields back into the internal
+			// representation with pattern layers for runtime enforcement.
+			taskPermissions: historyItem.taskPermissions ? toTaskPermissions(historyItem.taskPermissions) : undefined,
 		})
 
 		if (isRehydratingCurrentTask) {

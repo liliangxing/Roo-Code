@@ -5,7 +5,9 @@ import {
 	matchesAllPatternLayers,
 	taskPermissionsSchema,
 	toTaskPermissions,
+	isSafeRegex,
 } from "../task-permissions.js"
+import { historyItemSchema } from "../history.js"
 import type { TaskPermissions } from "../task-permissions.js"
 
 describe("TaskPermissions", () => {
@@ -244,6 +246,176 @@ describe("TaskPermissions", () => {
 			const layers = [["src/.*", "tests/.*"]]
 			expect(matchesAllPatternLayers("tests/unit/test.ts", layers)).toBe(true)
 			expect(matchesAllPatternLayers("docs/readme.md", layers)).toBe(false)
+		})
+	})
+
+	describe("isSafeRegex", () => {
+		it("allows simple patterns", () => {
+			expect(isSafeRegex("src/.*")).toBe(true)
+			expect(isSafeRegex("^foo$")).toBe(true)
+			expect(isSafeRegex("[a-z]+")).toBe(true)
+			expect(isSafeRegex("npm\\s+test.*")).toBe(true)
+			expect(isSafeRegex("src/components/.*\\.tsx?")).toBe(true)
+		})
+
+		it("rejects nested quantifiers (a+)+", () => {
+			expect(isSafeRegex("(a+)+")).toBe(false)
+		})
+
+		it("rejects nested quantifiers (a*)*", () => {
+			expect(isSafeRegex("(a*)*")).toBe(false)
+		})
+
+		it("rejects nested quantifiers (.*)+", () => {
+			expect(isSafeRegex("(.*)+")).toBe(false)
+		})
+
+		it("rejects nested quantifiers with braces (a{1,})+", () => {
+			expect(isSafeRegex("(a{1,})+")).toBe(false)
+		})
+
+		it("rejects star-height > 1 patterns like (.+)+", () => {
+			expect(isSafeRegex("(.+)+")).toBe(false)
+		})
+
+		it("rejects star-height > 1 patterns like (\\w+)*", () => {
+			expect(isSafeRegex("(\\w+)*")).toBe(false)
+		})
+
+		it("rejects patterns that exceed max length", () => {
+			const longPattern = "a".repeat(501)
+			expect(isSafeRegex(longPattern)).toBe(false)
+		})
+
+		it("allows patterns at max length", () => {
+			const maxPattern = "a".repeat(500)
+			expect(isSafeRegex(maxPattern)).toBe(true)
+		})
+	})
+
+	describe("schema rejects unsafe regex", () => {
+		it("rejects nested quantifiers in filePatterns", () => {
+			const result = taskPermissionsSchema.safeParse({
+				filePatterns: ["(a+)+"],
+			})
+			expect(result.success).toBe(false)
+		})
+
+		it("rejects nested quantifiers in commandPatterns", () => {
+			const result = taskPermissionsSchema.safeParse({
+				commandPatterns: ["(.*)+"],
+			})
+			expect(result.success).toBe(false)
+		})
+
+		it("allows safe regex in schema", () => {
+			const result = taskPermissionsSchema.safeParse({
+				filePatterns: ["src/components/.*\\.tsx?"],
+				commandPatterns: ["npm\\s+test.*"],
+			})
+			expect(result.success).toBe(true)
+		})
+	})
+
+	describe("matchesAnyPattern skips unsafe patterns at runtime", () => {
+		it("skips unsafe pattern and does not match", () => {
+			// (a+)+ is a ReDoS-prone pattern -- should be skipped
+			expect(matchesAnyPattern("aaa", ["(a+)+"])).toBe(false)
+		})
+
+		it("still matches safe patterns alongside unsafe ones", () => {
+			// The safe pattern "aaa" should still work
+			expect(matchesAnyPattern("aaa", ["(a+)+", "aaa"])).toBe(true)
+		})
+	})
+
+	describe("HistoryItem taskPermissions persistence", () => {
+		it("accepts a HistoryItem with taskPermissions", () => {
+			const result = historyItemSchema.safeParse({
+				id: "test-task",
+				number: 1,
+				ts: Date.now(),
+				task: "Test task",
+				tokensIn: 100,
+				tokensOut: 50,
+				totalCost: 0.01,
+				taskPermissions: {
+					filePatterns: ["src/.*"],
+					commandPatterns: ["npm test.*"],
+					allowedTools: ["read_file"],
+					deniedTools: ["execute_command"],
+				},
+			})
+			expect(result.success).toBe(true)
+			if (result.success) {
+				expect(result.data.taskPermissions).toBeDefined()
+				expect(result.data.taskPermissions?.filePatterns).toEqual(["src/.*"])
+			}
+		})
+
+		it("accepts a HistoryItem without taskPermissions", () => {
+			const result = historyItemSchema.safeParse({
+				id: "test-task",
+				number: 1,
+				ts: Date.now(),
+				task: "Test task",
+				tokensIn: 100,
+				tokensOut: 50,
+				totalCost: 0.01,
+			})
+			expect(result.success).toBe(true)
+			if (result.success) {
+				expect(result.data.taskPermissions).toBeUndefined()
+			}
+		})
+
+		it("rejects HistoryItem with invalid taskPermissions regex", () => {
+			const result = historyItemSchema.safeParse({
+				id: "test-task",
+				number: 1,
+				ts: Date.now(),
+				task: "Test task",
+				tokensIn: 100,
+				tokensOut: 50,
+				totalCost: 0.01,
+				taskPermissions: {
+					filePatterns: ["[invalid"],
+				},
+			})
+			expect(result.success).toBe(false)
+		})
+
+		it("rejects HistoryItem with unsafe ReDoS patterns", () => {
+			const result = historyItemSchema.safeParse({
+				id: "test-task",
+				number: 1,
+				ts: Date.now(),
+				task: "Test task",
+				tokensIn: 100,
+				tokensOut: 50,
+				totalCost: 0.01,
+				taskPermissions: {
+					filePatterns: ["(a+)+"],
+				},
+			})
+			expect(result.success).toBe(false)
+		})
+
+		it("round-trips permissions through toTaskPermissions", () => {
+			const input = {
+				filePatterns: ["src/.*"],
+				commandPatterns: ["npm.*"],
+				allowedTools: ["read_file"],
+				deniedTools: ["execute_command"],
+			}
+			const internal = toTaskPermissions(input)
+			expect(internal._filePatternLayers).toEqual([["src/.*"]])
+			expect(internal._commandPatternLayers).toEqual([["npm.*"]])
+			// Serializable fields survive round-trip
+			expect(internal.filePatterns).toEqual(input.filePatterns)
+			expect(internal.commandPatterns).toEqual(input.commandPatterns)
+			expect(internal.allowedTools).toEqual(input.allowedTools)
+			expect(internal.deniedTools).toEqual(input.deniedTools)
 		})
 	})
 })
