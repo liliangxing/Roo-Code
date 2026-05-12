@@ -1189,6 +1189,11 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 		case "cancelTask":
 			await provider.cancelTask()
 			break
+		case "cancelBackgroundTask":
+			if (message.taskId) {
+				await provider.backgroundTaskRunner.cancelTask(message.taskId)
+			}
+			break
 		case "cancelAutoApproval":
 			// Cancel any pending auto-approval timeout for the current task
 			provider.getCurrentTask()?.cancelAutoApprovalTimeout()

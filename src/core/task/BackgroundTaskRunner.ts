@@ -10,6 +10,8 @@
  * This is Phase 4 of the parallel execution roadmap: Background Read-Only Concurrency.
  */
 
+import { BackgroundTaskStatusInfo } from "@roo-code/types"
+
 import { Task, TaskOptions } from "./Task"
 
 /** Read-only tools that background tasks are allowed to use. */
@@ -46,11 +48,27 @@ export interface BackgroundTaskRunnerCallbacks {
 	onTaskError?: (taskId: string, parentTaskId: string, error: Error) => void
 }
 
+/** Maximum number of recently completed tasks to keep for UI display. */
+const MAX_COMPLETED_TASKS = 10
+
+export interface CompletedBackgroundTaskInfo {
+	taskId: string
+	parentTaskId: string
+	status: "completed" | "cancelled" | "timed_out" | "error"
+	startedAt: number
+	completedAt: number
+	resultSummary?: string
+	mode?: string
+}
+
 export class BackgroundTaskRunner {
 	private backgroundTasks: Map<string, BackgroundTaskInfo> = new Map()
+	private completedTasks: CompletedBackgroundTaskInfo[] = []
 	private maxConcurrentTasks: number
 	private taskTimeoutMs: number
 	private callbacks: BackgroundTaskRunnerCallbacks
+	/** Called whenever the set of active/completed tasks changes, so the UI can be refreshed. */
+	public onStateChanged?: () => void
 
 	constructor(
 		maxConcurrentTasks: number = DEFAULT_MAX_BACKGROUND_TASKS,
@@ -108,12 +126,14 @@ export class BackgroundTaskRunner {
 			`[BackgroundTaskRunner] Registered background task ${task.taskId} ` +
 				`(parent: ${parentTaskId}, active: ${this.backgroundTasks.size}/${this.maxConcurrentTasks})`,
 		)
+
+		this.notifyStateChanged()
 	}
 
 	/**
 	 * Called when a background task completes. Cleans up tracking state.
 	 */
-	onTaskCompleted(taskId: string): BackgroundTaskInfo | undefined {
+	onTaskCompleted(taskId: string, resultSummary?: string): BackgroundTaskInfo | undefined {
 		const info = this.backgroundTasks.get(taskId)
 
 		if (!info) {
@@ -123,10 +143,21 @@ export class BackgroundTaskRunner {
 		clearTimeout(info.timeoutHandle)
 		this.backgroundTasks.delete(taskId)
 
+		this.addCompletedTask({
+			taskId,
+			parentTaskId: info.parentTaskId,
+			status: "completed",
+			startedAt: info.startedAt,
+			completedAt: Date.now(),
+			resultSummary,
+		})
+
 		console.log(
 			`[BackgroundTaskRunner] Background task ${taskId} completed ` +
 				`(active: ${this.backgroundTasks.size}/${this.maxConcurrentTasks})`,
 		)
+
+		this.notifyStateChanged()
 
 		return info
 	}
@@ -174,9 +205,12 @@ export class BackgroundTaskRunner {
 
 		clearTimeout(info.timeoutHandle)
 
+		let status: CompletedBackgroundTaskInfo["status"] = "cancelled"
+
 		try {
 			await info.task.abortTask(true)
 		} catch (error) {
+			status = "error"
 			const err = error instanceof Error ? error : new Error(String(error))
 			console.error(`[BackgroundTaskRunner] Error aborting background task ${taskId}: ${err.message}`)
 			try {
@@ -188,10 +222,20 @@ export class BackgroundTaskRunner {
 
 		this.backgroundTasks.delete(taskId)
 
+		this.addCompletedTask({
+			taskId,
+			parentTaskId: info.parentTaskId,
+			status,
+			startedAt: info.startedAt,
+			completedAt: Date.now(),
+		})
+
 		console.log(
 			`[BackgroundTaskRunner] Cancelled background task ${taskId} ` +
 				`(active: ${this.backgroundTasks.size}/${this.maxConcurrentTasks})`,
 		)
+
+		this.notifyStateChanged()
 	}
 
 	/**
@@ -206,11 +250,78 @@ export class BackgroundTaskRunner {
 	}
 
 	/**
+	 * Returns the combined status of all active and recently completed background tasks
+	 * for display in the webview UI.
+	 */
+	getTasksStatus(): BackgroundTaskStatusInfo[] {
+		const activeTasks: BackgroundTaskStatusInfo[] = []
+
+		for (const [taskId, info] of this.backgroundTasks) {
+			activeTasks.push({
+				taskId,
+				parentTaskId: info.parentTaskId,
+				status: "running",
+				startedAt: info.startedAt,
+			})
+		}
+
+		const completedStatuses: BackgroundTaskStatusInfo[] = this.completedTasks.map((ct) => ({
+			taskId: ct.taskId,
+			parentTaskId: ct.parentTaskId,
+			status: ct.status,
+			startedAt: ct.startedAt,
+			completedAt: ct.completedAt,
+			resultSummary: ct.resultSummary,
+			mode: ct.mode,
+		}))
+
+		return [...activeTasks, ...completedStatuses]
+	}
+
+	/**
+	 * Returns the list of recently completed tasks (for testing and direct access).
+	 */
+	getCompletedTasks(): readonly CompletedBackgroundTaskInfo[] {
+		return this.completedTasks
+	}
+
+	/**
+	 * Clears completed tasks from the buffer.
+	 */
+	clearCompletedTasks(): void {
+		this.completedTasks = []
+		this.notifyStateChanged()
+	}
+
+	/**
+	 * Add a completed task to the buffer, evicting the oldest if at capacity.
+	 */
+	private addCompletedTask(info: CompletedBackgroundTaskInfo): void {
+		this.completedTasks.push(info)
+
+		if (this.completedTasks.length > MAX_COMPLETED_TASKS) {
+			this.completedTasks = this.completedTasks.slice(-MAX_COMPLETED_TASKS)
+		}
+	}
+
+	/**
+	 * Notify the owner that background task state has changed.
+	 */
+	private notifyStateChanged(): void {
+		try {
+			this.onStateChanged?.()
+		} catch {
+			// Callback errors must not break internal logic.
+		}
+	}
+
+	/**
 	 * Handle timeout of a background task.
 	 */
 	private async timeoutTask(taskId: string): Promise<void> {
 		const info = this.backgroundTasks.get(taskId)
 		const parentTaskId = info?.parentTaskId ?? "unknown"
+		const startedAt = info?.startedAt ?? Date.now()
 
 		console.warn(`[BackgroundTaskRunner] Background task ${taskId} timed out after ${this.taskTimeoutMs}ms`)
 
@@ -220,6 +331,28 @@ export class BackgroundTaskRunner {
 			// Callback errors must not break cleanup.
 		}
 
-		await this.cancelTask(taskId)
+		// Record as timed_out before cancelling (cancelTask will record as cancelled otherwise)
+		clearTimeout(info?.timeoutHandle)
+		if (info) {
+			try {
+				await info.task.abortTask(true)
+			} catch (error) {
+				const err = error instanceof Error ? error : new Error(String(error))
+				console.error(`[BackgroundTaskRunner] Error aborting timed-out task ${taskId}: ${err.message}`)
+			}
+			this.backgroundTasks.delete(taskId)
+
+			this.addCompletedTask({
+				taskId,
+				parentTaskId,
+				status: "timed_out",
+				startedAt,
+				completedAt: Date.now(),
+			})
+
+			this.notifyStateChanged()
+		} else {
+			await this.cancelTask(taskId)
+		}
 	}
 }

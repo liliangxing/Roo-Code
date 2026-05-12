@@ -141,14 +141,21 @@ export class ClineProvider
 	private recentTasksCache?: string[]
 	public readonly taskHistoryStore: TaskHistoryStore
 	private taskHistoryStoreInitialized = false
-	public readonly backgroundTaskRunner: BackgroundTaskRunner = new BackgroundTaskRunner(undefined, undefined, {
-		onTaskTimeout: (taskId, _parentTaskId) => {
-			vscode.window.showWarningMessage(`Background task ${taskId} timed out and was cancelled.`)
-		},
-		onTaskError: (taskId, _parentTaskId, error) => {
-			vscode.window.showWarningMessage(`Background task ${taskId} encountered an error: ${error.message}`)
-		},
-	})
+	public readonly backgroundTaskRunner: BackgroundTaskRunner = (() => {
+		const runner = new BackgroundTaskRunner(undefined, undefined, {
+			onTaskTimeout: (taskId: string, _parentTaskId: string) => {
+				vscode.window.showWarningMessage(`Background task ${taskId} timed out and was cancelled.`)
+			},
+			onTaskError: (taskId, _parentTaskId, error) => {
+				vscode.window.showWarningMessage(`Background task ${taskId} encountered an error: ${error.message}`)
+			},
+		})
+		runner.onStateChanged = () => {
+			// Push updated background task status to the webview whenever tasks change
+			this.postBackgroundTasksToWebview()
+		}
+		return runner
+	})()
 	private globalStateWriteThroughTimer: ReturnType<typeof setTimeout> | null = null
 	private static readonly GLOBAL_STATE_WRITE_THROUGH_DEBOUNCE_MS = 5000 // 5 seconds
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -1850,6 +1857,19 @@ export class ClineProvider
 	}
 
 	/**
+	 * Push only the background tasks status to the webview.
+	 * This is a lightweight update triggered by BackgroundTaskRunner.onStateChanged
+	 * so the UI can refresh the panel without a full state push.
+	 */
+	postBackgroundTasksToWebview(): void {
+		const backgroundTasks = this.backgroundTaskRunner.getTasksStatus()
+		this.postMessageToWebview({
+			type: "state",
+			state: { backgroundTasks } as any,
+		})
+	}
+
+	/**
 	 * Like postStateToWebview but intentionally omits taskHistory.
 	 *
 	 * Rationale:
@@ -2131,6 +2151,7 @@ export class ClineProvider
 				}
 			})(),
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
+			backgroundTasks: this.backgroundTaskRunner.getTasksStatus(),
 		}
 	}
 
@@ -3017,7 +3038,7 @@ export class ClineProvider
 	 * task's API conversation as a system message.
 	 */
 	private async handleBackgroundTaskComplete(taskId: string, result: string): Promise<void> {
-		const info = this.backgroundTaskRunner.onTaskCompleted(taskId)
+		const info = this.backgroundTaskRunner.onTaskCompleted(taskId, result)
 
 		if (!info) {
 			this.log(`[handleBackgroundTaskComplete] Task ${taskId} not found in background runner`)
