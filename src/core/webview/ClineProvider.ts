@@ -80,9 +80,10 @@ import { ContextProxy } from "../config/ContextProxy"
 import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
+import { buildTaskContext } from "../task/TaskContextBuilder"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import type { ClineMessage, TodoItem } from "@roo-code/types"
+import type { ClineMessage, TodoItem, TaskPermissions } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages, TaskHistoryStore } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
 import { getNonce } from "./getNonce"
@@ -2785,8 +2786,10 @@ export class ClineProvider
 		message: string
 		initialTodos: TodoItem[]
 		mode: string
+		/** Optional permission boundaries for the child task (Phase 3a) */
+		permissions?: TaskPermissions
 	}): Promise<Task> {
-		const { parentTaskId, message, initialTodos, mode } = params
+		const { parentTaskId, message, initialTodos, mode, permissions } = params
 
 		// Metadata-driven delegation is always enabled
 
@@ -2862,24 +2865,35 @@ export class ClineProvider
 			)
 		}
 
-		// 4) Create child as sole active (parent reference preserved for lineage)
+		// 4) Build an isolated TaskContext for the child (Phase 3a).
+		//    This snapshots mode, API config, and permission boundaries so the child
+		//    task carries its own context instead of reading shared provider state.
+		const childTaskContext = await buildTaskContext(this, {
+			mode,
+			permissions,
+			parentTaskId,
+			rootTaskId: parent.rootTaskId ?? parent.taskId,
+		})
+
+		// 5) Create child as sole active (parent reference preserved for lineage)
 		// Pass initialStatus: "active" to ensure the child task's historyItem is created
 		// with status from the start, avoiding race conditions where the task might
 		// call attempt_completion before status is persisted separately.
 		//
 		// Pass startTask: false to prevent the child from beginning its task loop
 		// (and writing to globalState via saveClineMessages → updateTaskHistory)
-		// before we persist the parent's delegation metadata in step 5.
-		// Without this, the child's fire-and-forget startTask() races with step 5,
+		// before we persist the parent's delegation metadata in step 6.
+		// Without this, the child's fire-and-forget startTask() races with step 6,
 		// and the last writer to globalState overwrites the other's changes—
 		// causing the parent's delegation fields to be lost.
 		const child = await this.createTask(message, undefined, parent as any, {
 			initialTodos,
 			initialStatus: "active",
 			startTask: false,
+			taskContext: childTaskContext,
 		})
 
-		// 5) Persist parent delegation metadata BEFORE the child starts writing.
+		// 6) Persist parent delegation metadata BEFORE the child starts writing.
 		try {
 			const { historyItem } = await this.getTaskWithId(parentTaskId)
 			const childIds = Array.from(new Set([...(historyItem.childIds ?? []), child.taskId]))
@@ -2899,10 +2913,10 @@ export class ClineProvider
 			)
 		}
 
-		// 6) Start the child task now that parent metadata is safely persisted.
+		// 7) Start the child task now that parent metadata is safely persisted.
 		child.start()
 
-		// 7) Emit TaskDelegated (provider-level)
+		// 8) Emit TaskDelegated (provider-level)
 		try {
 			this.emit(RooCodeEventName.TaskDelegated, parentTaskId, child.taskId)
 		} catch {

@@ -51,6 +51,7 @@ import {
 	MIN_CHECKPOINT_TIMEOUT_SECONDS,
 	MAX_MCP_TOOLS_THRESHOLD,
 	countEnabledMcpTools,
+	type TaskContext,
 } from "@roo-code/types"
 
 // api
@@ -153,6 +154,15 @@ export interface TaskOptions extends CreateTaskOptions {
 	workspacePath?: string
 	/** Initial status for the task's history item (e.g., "active" for child tasks) */
 	initialStatus?: "active" | "delegated" | "completed"
+	/**
+	 * Optional isolated task context containing mode, API config, and permissions.
+	 * When provided, the task uses this context instead of reading from the provider.
+	 * This is the foundation for Phase 3a task isolation -- tasks that carry their
+	 * own context can eventually run concurrently without shared state conflicts.
+	 *
+	 * If not provided, the task falls back to the existing provider.getState() behavior.
+	 */
+	taskContext?: TaskContext
 }
 
 export class Task extends EventEmitter<TaskEvents> implements TaskLike {
@@ -171,6 +181,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	readonly parentTask: Task | undefined = undefined
 	readonly taskNumber: number
 	readonly workspacePath: string
+
+	/**
+	 * Isolated task context carrying mode, API config, and permission boundaries.
+	 * When set, the task uses this context instead of reading shared provider state.
+	 * This is the foundation for concurrent task execution in later phases.
+	 *
+	 * @see TaskContext in @roo-code/types
+	 */
+	readonly taskContext?: TaskContext
 
 	/**
 	 * The mode associated with this task. Persisted across sessions
@@ -430,6 +449,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		initialTodos,
 		workspacePath,
 		initialStatus,
+		taskContext,
 	}: TaskOptions) {
 		super()
 
@@ -491,6 +511,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.parentTask = parentTask
 		this.taskNumber = taskNumber
 		this.initialStatus = initialStatus
+		this.taskContext = taskContext
 
 		this.assistantMessageParser = undefined
 
@@ -542,6 +563,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		if (historyItem) {
 			this._taskMode = historyItem.mode || defaultModeSlug
 			this._taskApiConfigName = historyItem.apiConfigName
+			this.taskModeReady = Promise.resolve()
+			this.taskApiConfigReady = Promise.resolve()
+		} else if (taskContext) {
+			// Phase 3a: Use isolated TaskContext instead of reading from provider state.
+			// This allows the task to carry its own mode and API config snapshot,
+			// independent of the provider's shared mutable state.
+			this._taskMode = taskContext.mode || defaultModeSlug
+			this._taskApiConfigName = taskContext.apiConfigName ?? "default"
 			this.taskModeReady = Promise.resolve()
 			this.taskApiConfigReady = Promise.resolve()
 		} else {
