@@ -5,6 +5,7 @@ import type { RooCodeSettings } from "./global-settings.js"
 import type { ClineMessage, QueuedMessage, TokenUsage } from "./message.js"
 import type { ToolUsage, ToolName } from "./tool.js"
 import type { TodoItem } from "./todo.js"
+import type { TaskContext } from "./task-context.js"
 
 /**
  * TaskProviderLike
@@ -94,6 +95,12 @@ export interface CreateTaskOptions {
 	/** Whether to start the task loop immediately (default: true).
 	 *  When false, the caller must invoke `task.start()` manually. */
 	startTask?: boolean
+	/**
+	 * Optional isolated task context containing mode, API config, and permissions.
+	 * When provided, the task uses this context instead of reading from the provider.
+	 * Phase 3a foundation for concurrent task execution.
+	 */
+	taskContext?: TaskContext
 }
 
 export enum TaskStatus {
