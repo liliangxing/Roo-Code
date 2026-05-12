@@ -3122,6 +3122,7 @@ export class ClineProvider
 		const child = await this.createTask(message, undefined, parent as any, {
 			initialTodos,
 			initialStatus: "active",
+			taskPermissions: permissions,
 			startTask: false,
 			taskContext: childTaskContext,
 		})

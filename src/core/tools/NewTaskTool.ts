@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 
 import { TodoItem } from "@roo-code/types"
 import type { SubtaskQueueItem } from "@roo-code/types"
+import { type TaskPermissions, taskPermissionsSchema, toTaskPermissions } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import { getModeBySlug } from "../../shared/modes"
@@ -17,13 +18,14 @@ interface NewTaskParams {
 	message: string
 	todos?: string
 	task_queue?: string
+	permissions?: string
 }
 
 export class NewTaskTool extends BaseTool<"new_task"> {
 	readonly name = "new_task" as const
 
 	async execute(params: NewTaskParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { mode, message, todos, task_queue } = params
+		const { mode, message, todos, task_queue, permissions: permissionsJson } = params
 		const { askApproval, handleError, pushToolResult } = callbacks
 
 		try {
@@ -84,6 +86,33 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				}
 			}
 
+			// Parse and validate permissions if provided
+			let parsedPermissions: TaskPermissions | undefined
+			if (permissionsJson) {
+				try {
+					const raw = JSON.parse(permissionsJson)
+					const result = taskPermissionsSchema.safeParse(raw)
+					if (!result.success) {
+						task.consecutiveMistakeCount++
+						task.recordToolError("new_task")
+						task.didToolFailInCurrentTurn = true
+						pushToolResult(
+							formatResponse.toolError(
+								`Invalid permissions format: ${result.error.issues.map((i) => i.message).join(", ")}`,
+							),
+						)
+						return
+					}
+					parsedPermissions = result.data
+				} catch (error) {
+					task.consecutiveMistakeCount++
+					task.recordToolError("new_task")
+					task.didToolFailInCurrentTurn = true
+					pushToolResult(formatResponse.toolError("Invalid permissions: must be a valid JSON string"))
+					return
+				}
+			}
+
 			task.consecutiveMistakeCount = 0
 
 			// Un-escape one level of backslashes before '@' for hierarchical subtasks
@@ -139,6 +168,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				content: message,
 				todos: todoItems,
 				taskQueue: queueItems.length > 0 ? queueItems : undefined,
+				...(parsedPermissions ? { permissions: parsedPermissions } : {}),
 			})
 
 			const didApprove = await askApproval("tool", toolMessage)
@@ -154,6 +184,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				initialTodos: todoItems,
 				mode,
 				subtaskQueue: queueItems.length > 0 ? queueItems : undefined,
+				permissions: parsedPermissions,
 			})
 
 			// Reflect delegation in tool result (no pause/unpause, no wait)

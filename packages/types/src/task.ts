@@ -4,6 +4,7 @@ import { RooCodeEventName } from "./events.js"
 import type { RooCodeSettings } from "./global-settings.js"
 import type { ClineMessage, QueuedMessage, TokenUsage } from "./message.js"
 import type { ToolUsage, ToolName } from "./tool.js"
+import type { TaskPermissions } from "./task-permissions.js"
 import type { TodoItem } from "./todo.js"
 import type { TaskContext } from "./task-context.js"
 
@@ -101,6 +102,9 @@ export interface CreateTaskOptions {
 	 * Phase 3a foundation for concurrent task execution.
 	 */
 	taskContext?: TaskContext
+	/** Permission boundaries for the task, set by the parent via new_task tool.
+	 *  When set, restricts what file paths, commands, and tools the task may use. */
+	taskPermissions?: TaskPermissions
 }
 
 export enum TaskStatus {

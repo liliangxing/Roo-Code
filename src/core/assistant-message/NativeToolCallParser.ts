@@ -551,6 +551,7 @@ export class NativeToolCallParser {
 				if (partialArgs.todos !== undefined) {
 					nativeArgs = {
 						todos: partialArgs.todos,
+						permissions: partialArgs.permissions,
 					}
 				}
 				break
@@ -634,6 +635,7 @@ export class NativeToolCallParser {
 						message: partialArgs.message,
 						todos: partialArgs.todos,
 						task_queue: partialArgs.task_queue,
+						permissions: partialArgs.permissions,
 					}
 				}
 				break
@@ -888,6 +890,7 @@ export class NativeToolCallParser {
 					if (args.todos !== undefined) {
 						nativeArgs = {
 							todos: args.todos,
+							permissions: args.permissions,
 						} as NativeArgsFor<TName>
 					}
 					break
@@ -984,6 +987,7 @@ export class NativeToolCallParser {
 							message: args.message,
 							todos: args.todos,
 							task_queue: args.task_queue,
+							permissions: args.permissions,
 						} as NativeArgsFor<TName>
 					}
 					break
