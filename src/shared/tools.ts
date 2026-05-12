@@ -105,9 +105,14 @@ export type NativeToolArgs = {
 	edit_file: { file_path: string; old_string: string; new_string: string; expected_replacements?: number }
 	apply_patch: { patch: string }
 	list_files: { path: string; recursive?: boolean }
-	new_task: { mode: string; message: string; todos?: string; task_queue?: string; permissions?: string }
-	new_task: { mode: string; message: string; todos?: string; background?: string }
-	new_task: { mode: string; message: string; todos?: string }
+	new_task: {
+		mode: string
+		message: string
+		todos?: string
+		task_queue?: string
+		permissions?: string
+		background?: string
+	}
 	ask_followup_question: {
 		question: string
 		follow_up: Array<{ text: string; mode?: string }>
@@ -245,10 +250,9 @@ export interface SwitchModeToolUse extends ToolUse<"switch_mode"> {
 
 export interface NewTaskToolUse extends ToolUse<"new_task"> {
 	name: "new_task"
-	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos" | "task_queue">>
-	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos" | "permissions">>
-	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos" | "background">>
-	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos">>
+	params: Partial<
+		Pick<Record<ToolParamName, string>, "mode" | "message" | "todos" | "task_queue" | "permissions" | "background">
+	>
 }
 
 export interface RunSlashCommandToolUse extends ToolUse<"run_slash_command"> {
