@@ -64,7 +64,7 @@ describe("advanceSubtaskQueue", () => {
 			getCurrentTask: vi.fn().mockReturnValue({ taskId: "child-1" }),
 			removeClineFromStack: vi.fn().mockResolvedValue(undefined),
 			getTaskWithId: vi.fn().mockResolvedValue({
-				historyItem: makeHistoryItem({ id: "child-1", status: "active" }),
+				historyItem: makeHistoryItem({ id: "child-1", mode: "code", status: "active" }),
 			}),
 			updateTaskHistory: vi.fn().mockResolvedValue(undefined),
 			handleModeSwitch: vi.fn().mockResolvedValue(undefined),
@@ -73,6 +73,8 @@ describe("advanceSubtaskQueue", () => {
 			log: vi.fn(),
 		}
 
+		// Queue items represent ADDITIONAL subtasks after the initial child.
+		// subtaskQueueIndex=0 means queue[0] is the next to dispatch.
 		const subtaskQueue: SubtaskQueueItem[] = [
 			{ mode: "code", message: "Step 1" },
 			{ mode: "debug", message: "Step 2" },
@@ -88,7 +90,7 @@ describe("advanceSubtaskQueue", () => {
 		const result = await (ClineProvider.prototype as any).advanceSubtaskQueue.call(provider, {
 			parentTaskId: "parent-1",
 			childTaskId: "child-1",
-			completionResultSummary: "Step 1 done",
+			completionResultSummary: "Initial task done",
 			historyItem,
 		})
 
@@ -102,11 +104,11 @@ describe("advanceSubtaskQueue", () => {
 			expect.objectContaining({ id: "child-1", status: "completed" }),
 		)
 
-		// Should have switched mode to next subtask's mode
-		expect(provider.handleModeSwitch).toHaveBeenCalledWith("debug")
+		// Should have switched mode to queue[0]'s mode (the next item to dispatch)
+		expect(provider.handleModeSwitch).toHaveBeenCalledWith("code")
 
-		// Should have created the next child with the queued message
-		expect(provider.createTask).toHaveBeenCalledWith("Step 2", undefined, undefined, {
+		// Should have created the next child with queue[0]'s message
+		expect(provider.createTask).toHaveBeenCalledWith("Step 1", undefined, undefined, {
 			initialTodos: [],
 			initialStatus: "active",
 			startTask: false,
@@ -115,12 +117,13 @@ describe("advanceSubtaskQueue", () => {
 		// Should have started the next child
 		expect(mockChild.start).toHaveBeenCalled()
 
-		// Should have updated parent with advanced queue index
+		// Should have updated parent with advanced queue index (0 -> 1)
+		// completedMode comes from child's history (mode: "code")
 		expect(provider.updateTaskHistory).toHaveBeenCalledWith(
 			expect.objectContaining({
 				id: "parent-1",
 				subtaskQueueIndex: 1,
-				subtaskResults: [{ taskId: "child-1", mode: "unknown", summary: "Step 1 done" }],
+				subtaskResults: [{ taskId: "child-1", mode: "code", summary: "Initial task done" }],
 				awaitingChildId: "child-2",
 				delegatedToId: "child-2",
 			}),
@@ -131,7 +134,7 @@ describe("advanceSubtaskQueue", () => {
 			RooCodeEventName.TaskDelegationCompleted,
 			"parent-1",
 			"child-1",
-			"Step 1 done",
+			"Initial task done",
 		)
 		expect(emitSpy).toHaveBeenCalledWith(RooCodeEventName.TaskDelegated, "parent-1", "child-2")
 	})
@@ -141,7 +144,7 @@ describe("advanceSubtaskQueue", () => {
 			getCurrentTask: vi.fn().mockReturnValue({ taskId: "child-2" }),
 			removeClineFromStack: vi.fn().mockResolvedValue(undefined),
 			getTaskWithId: vi.fn().mockResolvedValue({
-				historyItem: makeHistoryItem({ id: "child-2", status: "active" }),
+				historyItem: makeHistoryItem({ id: "child-2", mode: "code", status: "active" }),
 			}),
 			updateTaskHistory: vi.fn().mockResolvedValue(undefined),
 			handleModeSwitch: vi.fn(),
@@ -151,11 +154,13 @@ describe("advanceSubtaskQueue", () => {
 			formatAggregatedQueueResults: (ClineProvider.prototype as any).formatAggregatedQueueResults,
 		}
 
+		// Queue has 1 item, subtaskQueueIndex=1 means queue[0] was already dispatched.
+		// Now that child completes and the queue is exhausted.
 		const subtaskQueue: SubtaskQueueItem[] = [{ mode: "code", message: "Step 1" }]
 
 		const historyItem = makeHistoryItem({
 			subtaskQueue,
-			subtaskQueueIndex: 0,
+			subtaskQueueIndex: 1,
 			subtaskResults: [{ taskId: "child-1", mode: "code", summary: "Step 1 done" }],
 			childIds: ["child-1", "child-2"],
 		})

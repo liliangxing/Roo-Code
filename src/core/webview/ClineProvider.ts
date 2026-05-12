@@ -3397,15 +3397,10 @@ export class ClineProvider
 			return { handled: false, aggregatedSummary: completionResultSummary }
 		}
 
+		// currentIndex is the next queue item to dispatch (0-based).
+		// When the initial child (from mode/message params) completes, currentIndex is 0,
+		// meaning queue[0] should be dispatched first.
 		const currentIndex = subtaskQueueIndex ?? 0
-		const nextIndex = currentIndex + 1
-
-		// Record this child's result
-		const completedMode = historyItem.mode ?? "unknown"
-		const updatedResults = [
-			...(subtaskResults ?? []),
-			{ taskId: childTaskId, mode: completedMode, summary: completionResultSummary },
-		]
 
 		// Close current child if still open
 		const current = this.getCurrentTask()
@@ -3413,9 +3408,11 @@ export class ClineProvider
 			await this.removeClineFromStack()
 		}
 
-		// Mark child as completed
+		// Fetch child history to get the child's actual mode and mark it completed
+		let completedMode = "unknown"
 		try {
 			const { historyItem: childHistory } = await this.getTaskWithId(childTaskId)
+			completedMode = childHistory.mode ?? "unknown"
 			await this.updateTaskHistory({ ...childHistory, status: "completed" })
 		} catch (err) {
 			this.log(
@@ -3425,6 +3422,12 @@ export class ClineProvider
 			)
 		}
 
+		// Record this child's result using the child's actual mode
+		const updatedResults = [
+			...(subtaskResults ?? []),
+			{ taskId: childTaskId, mode: completedMode, summary: completionResultSummary },
+		]
+
 		// Emit completion event for the finished child
 		try {
 			this.emit(RooCodeEventName.TaskDelegationCompleted, parentTaskId, childTaskId, completionResultSummary)
@@ -3432,11 +3435,11 @@ export class ClineProvider
 			// non-fatal
 		}
 
-		if (nextIndex <= subtaskQueue.length - 1) {
+		if (currentIndex < subtaskQueue.length) {
 			// More subtasks in queue — start the next one
-			const nextSubtask = subtaskQueue[nextIndex]
+			const nextSubtask = subtaskQueue[currentIndex]
 			this.log(
-				`[advanceSubtaskQueue] Auto-advancing queue: subtask ${nextIndex + 1}/${subtaskQueue.length} (mode: ${nextSubtask.mode})`,
+				`[advanceSubtaskQueue] Auto-advancing queue: subtask ${currentIndex + 1}/${subtaskQueue.length} (mode: ${nextSubtask.mode})`,
 			)
 
 			// Switch mode
@@ -3466,7 +3469,7 @@ export class ClineProvider
 				awaitingChildId: nextChild.taskId,
 				childIds,
 				subtaskQueue,
-				subtaskQueueIndex: nextIndex,
+				subtaskQueueIndex: currentIndex + 1,
 				subtaskResults: updatedResults,
 			})
 
