@@ -41,6 +41,7 @@ import {
 	getApiProtocol,
 	type TaskPermissions,
 	mergeTaskPermissions,
+	toTaskPermissions,
 	getModelId,
 	isRetiredProvider,
 	isIdleAsk,
@@ -460,8 +461,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.parentTaskId = historyItem ? historyItem.parentTaskId : parentTask?.taskId
 		this.childTaskId = undefined
 
-		// Merge task permissions with parent (most-restrictive-wins)
-		this.taskPermissions = mergeTaskPermissions(parentTask?.taskPermissions, taskPermissions)
+		// Merge task permissions with parent (most-restrictive-wins).
+		// When restoring from history, use the persisted permissions as the base;
+		// when creating fresh, use the permissions passed via new_task tool.
+		const effectivePermissions = historyItem?.taskPermissions
+			? toTaskPermissions(historyItem.taskPermissions)
+			: taskPermissions
+		this.taskPermissions = mergeTaskPermissions(parentTask?.taskPermissions, effectivePermissions)
 
 		this.metadata = {
 			task: historyItem ? historyItem.task : task,
@@ -1182,6 +1188,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				await this.taskApiConfigReady
 			}
 
+			// Serialize only the input-level permission fields for persistence
+			// (exclude internal _*PatternLayers fields which are runtime-only)
+			const persistablePermissions = this.taskPermissions
+				? {
+						...(this.taskPermissions.filePatterns && { filePatterns: this.taskPermissions.filePatterns }),
+						...(this.taskPermissions.commandPatterns && {
+							commandPatterns: this.taskPermissions.commandPatterns,
+						}),
+						...(this.taskPermissions.allowedTools && { allowedTools: this.taskPermissions.allowedTools }),
+						...(this.taskPermissions.deniedTools && { deniedTools: this.taskPermissions.deniedTools }),
+					}
+				: undefined
+
 			const { historyItem, tokenUsage } = await taskMetadata({
 				taskId: this.taskId,
 				rootTaskId: this.rootTaskId,
@@ -1193,6 +1212,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				mode: this._taskMode || defaultModeSlug, // Use the task's own mode, not the current provider mode.
 				apiConfigName: this._taskApiConfigName, // Use the task's own provider profile, not the current provider profile.
 				initialStatus: this.initialStatus,
+				taskPermissions:
+					persistablePermissions && Object.keys(persistablePermissions).length > 0
+						? persistablePermissions
+						: undefined,
 			})
 
 			// Emit token/tool usage updates using debounced function

@@ -9,18 +9,62 @@ import { z } from "zod"
  * more access than its parent.
  */
 
-/** Zod refinement that rejects strings which are not valid regular expressions. */
-const regexString = z.string().refine(
-	(val) => {
-		try {
-			new RegExp(val)
-			return true
-		} catch {
-			return false
-		}
-	},
-	{ message: "Invalid regular expression" },
-)
+/** Maximum allowed length for a regex pattern to limit complexity. */
+const MAX_REGEX_PATTERN_LENGTH = 200
+
+/**
+ * Heuristic check for ReDoS-vulnerable patterns.
+ * Detects common dangerous constructs like nested quantifiers:
+ *   (a+)+, (a*)+, (a+)*, (a*){2,}, etc.
+ * These can cause catastrophic backtracking on crafted input.
+ */
+export function isSafeRegex(pattern: string): boolean {
+	if (pattern.length > MAX_REGEX_PATTERN_LENGTH) {
+		return false
+	}
+
+	// Detect nested quantifiers: a group with a quantifier inside, followed by an outer quantifier.
+	// Examples: (a+)+, (a+)*, (a*){2,}, (?:a+)+
+	// This regex looks for: group containing a quantifier, followed by another quantifier
+	const nestedQuantifierPattern = /\([^)]*[+*][^)]*\)[+*{]/
+	if (nestedQuantifierPattern.test(pattern)) {
+		return false
+	}
+
+	// Detect overlapping alternations inside repeated groups: (a|a)+, (.|a)+
+	// where both alternatives can match the same input
+	const overlappingAlternationInGroup = /\([^)]*\|[^)]*\)[+*{]/
+	if (overlappingAlternationInGroup.test(pattern)) {
+		return false
+	}
+
+	return true
+}
+
+/**
+ * Zod refinement that rejects strings which are not valid regular expressions,
+ * and also rejects patterns that are vulnerable to ReDoS (catastrophic backtracking).
+ */
+const regexString = z
+	.string()
+	.max(MAX_REGEX_PATTERN_LENGTH, {
+		message: `Regex pattern must be at most ${MAX_REGEX_PATTERN_LENGTH} characters`,
+	})
+	.refine(
+		(val) => {
+			try {
+				new RegExp(val)
+				return true
+			} catch {
+				return false
+			}
+		},
+		{ message: "Invalid regular expression" },
+	)
+	.refine((val) => isSafeRegex(val), {
+		message:
+			"Regex pattern rejected: potentially vulnerable to ReDoS (catastrophic backtracking). Avoid nested quantifiers like (a+)+ or overlapping alternations in repeated groups.",
+	})
 
 export const taskPermissionsSchema = z.object({
 	/**
