@@ -85,7 +85,7 @@ import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import type { ClineMessage, TodoItem } from "@roo-code/types"
+import type { ClineMessage, TodoItem, SubtaskQueueItem } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages, TaskHistoryStore } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
 import { getNonce } from "./getNonce"
@@ -3017,8 +3017,9 @@ export class ClineProvider
 		message: string
 		initialTodos: TodoItem[]
 		mode: string
+		subtaskQueue?: SubtaskQueueItem[]
 	}): Promise<Task> {
-		const { parentTaskId, message, initialTodos, mode } = params
+		const { parentTaskId, message, initialTodos, mode, subtaskQueue } = params
 
 		// Metadata-driven delegation is always enabled
 
@@ -3121,6 +3122,9 @@ export class ClineProvider
 				delegatedToId: child.taskId,
 				awaitingChildId: child.taskId,
 				childIds,
+				...(subtaskQueue && subtaskQueue.length > 0
+					? { subtaskQueue, subtaskQueueIndex: 0, subtaskResults: [] }
+					: {}),
 			}
 			await this.updateTaskHistory(updatedHistory)
 		} catch (err) {
@@ -3152,11 +3156,27 @@ export class ClineProvider
 		childTaskId: string
 		completionResultSummary: string
 	}): Promise<void> {
-		const { parentTaskId, childTaskId, completionResultSummary } = params
+		const { parentTaskId, childTaskId } = params
+		let effectiveSummary = params.completionResultSummary
 		const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
 
 		// 1) Load parent from history and current persisted messages
 		const { historyItem } = await this.getTaskWithId(parentTaskId)
+
+		// PHASE 2: Sequential fan-out — check if parent has queued subtasks
+		if (historyItem.subtaskQueue && historyItem.subtaskQueue.length > 0) {
+			const queueAdvanceResult = await this.advanceSubtaskQueue({
+				parentTaskId,
+				childTaskId,
+				completionResultSummary: effectiveSummary,
+				historyItem,
+			})
+			if (queueAdvanceResult.handled) {
+				return // Queue advanced to next subtask; do NOT reopen parent
+			}
+			// Queue exhausted — use aggregated summary and continue with normal reopen
+			effectiveSummary = queueAdvanceResult.aggregatedSummary
+		}
 
 		let parentClineMessages: ClineMessage[] = []
 		try {
@@ -3203,7 +3223,7 @@ export class ClineProvider
 		const subtaskUiMessage: ClineMessage = {
 			type: "say",
 			say: "subtask_result",
-			text: completionResultSummary,
+			text: effectiveSummary,
 			ts,
 		}
 		parentClineMessages.push(subtaskUiMessage)
@@ -3316,7 +3336,7 @@ export class ClineProvider
 			...historyItem,
 			status: "active",
 			completedByChildId: childTaskId,
-			completionResultSummary,
+			completionResultSummary: effectiveSummary,
 			awaitingChildId: undefined,
 			childIds,
 		}
@@ -3324,7 +3344,7 @@ export class ClineProvider
 
 		// 6) Emit TaskDelegationCompleted (provider-level)
 		try {
-			this.emit(RooCodeEventName.TaskDelegationCompleted, parentTaskId, childTaskId, completionResultSummary)
+			this.emit(RooCodeEventName.TaskDelegationCompleted, parentTaskId, childTaskId, effectiveSummary)
 		} catch {
 			// non-fatal
 		}
@@ -3356,6 +3376,149 @@ export class ClineProvider
 		} catch {
 			// non-fatal
 		}
+	}
+
+	/**
+	 * Advance the sequential fan-out subtask queue.
+	 * Called when a child completes and the parent has a subtaskQueue.
+	 *
+	 * Returns { handled: true } if the next subtask was started (caller should return).
+	 * Returns { handled: false, aggregatedSummary } if queue is exhausted (caller should continue with normal reopen).
+	 */
+	private async advanceSubtaskQueue(params: {
+		parentTaskId: string
+		childTaskId: string
+		completionResultSummary: string
+		historyItem: HistoryItem
+	}): Promise<{ handled: true } | { handled: false; aggregatedSummary: string }> {
+		const { parentTaskId, childTaskId, completionResultSummary, historyItem } = params
+		const { subtaskQueue, subtaskQueueIndex, subtaskResults } = historyItem
+		if (!subtaskQueue || subtaskQueue.length === 0) {
+			return { handled: false, aggregatedSummary: completionResultSummary }
+		}
+
+		const currentIndex = subtaskQueueIndex ?? 0
+		const nextIndex = currentIndex + 1
+
+		// Record this child's result
+		const completedMode = historyItem.mode ?? "unknown"
+		const updatedResults = [
+			...(subtaskResults ?? []),
+			{ taskId: childTaskId, mode: completedMode, summary: completionResultSummary },
+		]
+
+		// Close current child if still open
+		const current = this.getCurrentTask()
+		if (current?.taskId === childTaskId) {
+			await this.removeClineFromStack()
+		}
+
+		// Mark child as completed
+		try {
+			const { historyItem: childHistory } = await this.getTaskWithId(childTaskId)
+			await this.updateTaskHistory({ ...childHistory, status: "completed" })
+		} catch (err) {
+			this.log(
+				`[advanceSubtaskQueue] Failed to persist child completed status for ${childTaskId}: ${
+					(err as Error)?.message ?? String(err)
+				}`,
+			)
+		}
+
+		// Emit completion event for the finished child
+		try {
+			this.emit(RooCodeEventName.TaskDelegationCompleted, parentTaskId, childTaskId, completionResultSummary)
+		} catch {
+			// non-fatal
+		}
+
+		if (nextIndex <= subtaskQueue.length - 1) {
+			// More subtasks in queue — start the next one
+			const nextSubtask = subtaskQueue[nextIndex]
+			this.log(
+				`[advanceSubtaskQueue] Auto-advancing queue: subtask ${nextIndex + 1}/${subtaskQueue.length} (mode: ${nextSubtask.mode})`,
+			)
+
+			// Switch mode
+			try {
+				await this.handleModeSwitch(nextSubtask.mode as any)
+			} catch (e) {
+				this.log(
+					`[advanceSubtaskQueue] handleModeSwitch failed for queued mode '${nextSubtask.mode}': ${
+						(e as Error)?.message ?? String(e)
+					}`,
+				)
+			}
+
+			// Create next child
+			const nextChild = await this.createTask(nextSubtask.message, undefined, undefined, {
+				initialTodos: [],
+				initialStatus: "active",
+				startTask: false,
+			})
+
+			// Update parent metadata
+			const childIds = Array.from(new Set([...(historyItem.childIds ?? []), childTaskId, nextChild.taskId]))
+			await this.updateTaskHistory({
+				...historyItem,
+				status: "delegated",
+				delegatedToId: nextChild.taskId,
+				awaitingChildId: nextChild.taskId,
+				childIds,
+				subtaskQueue,
+				subtaskQueueIndex: nextIndex,
+				subtaskResults: updatedResults,
+			})
+
+			// Start the child
+			nextChild.start()
+
+			try {
+				this.emit(RooCodeEventName.TaskDelegated, parentTaskId, nextChild.taskId)
+			} catch {
+				// non-fatal
+			}
+
+			return { handled: true }
+		}
+
+		// Queue exhausted — aggregate results and let normal reopen proceed
+		const aggregatedSummary = this.formatAggregatedQueueResults(updatedResults, completionResultSummary)
+
+		// Clear queue from parent metadata (will be fully updated by caller)
+		const childIds = Array.from(new Set([...(historyItem.childIds ?? []), childTaskId]))
+		await this.updateTaskHistory({
+			...historyItem,
+			subtaskQueue: undefined,
+			subtaskQueueIndex: undefined,
+			subtaskResults: updatedResults,
+			childIds,
+		})
+
+		return { handled: false, aggregatedSummary }
+	}
+
+	/**
+	 * Format aggregated results from all completed subtasks in a queue.
+	 */
+	private formatAggregatedQueueResults(
+		results: Array<{ taskId: string; mode: string; summary: string }>,
+		lastSummary: string,
+	): string {
+		if (results.length === 0) {
+			return lastSummary
+		}
+
+		const lines = [`## Sequential Fan-Out Complete (${results.length} subtask${results.length > 1 ? "s" : ""})`, ""]
+
+		for (let i = 0; i < results.length; i++) {
+			const r = results[i]
+			lines.push(`### Subtask ${i + 1} (${r.mode}) — ${r.taskId}`)
+			lines.push(r.summary)
+			lines.push("")
+		}
+
+		return lines.join("\n")
 	}
 
 	/**
