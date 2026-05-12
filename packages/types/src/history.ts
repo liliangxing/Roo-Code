@@ -20,7 +20,8 @@ export const historyItemSchema = z.object({
 	workspace: z.string().optional(),
 	mode: z.string().optional(),
 	apiConfigName: z.string().optional(), // Provider profile name for sticky profile feature
-	status: z.enum(["active", "completed", "delegated"]).optional(),
+	background: z.boolean().optional(), // true if this was a background task
+	status: z.enum(["active", "completed", "delegated", "interrupted"]).optional(),
 	delegatedToId: z.string().optional(), // Last child this parent delegated to
 	childIds: z.array(z.string()).optional(), // All children spawned by this task
 	awaitingChildId: z.string().optional(), // Child currently awaited (set when delegated)

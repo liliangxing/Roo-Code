@@ -94,4 +94,33 @@ describe("TaskItemFooter", () => {
 
 		expect(screen.queryByText("history:subtaskTag")).not.toBeInTheDocument()
 	})
+
+	it("shows background tag when item.background is true", () => {
+		const backgroundItem = { ...mockItem, background: true }
+		render(<TaskItemFooter item={backgroundItem} variant="full" />)
+
+		expect(screen.getByText("history:backgroundTag")).toBeInTheDocument()
+	})
+
+	it("does not show background tag when item.background is falsy", () => {
+		render(<TaskItemFooter item={mockItem} variant="full" />)
+
+		expect(screen.queryByText("history:backgroundTag")).not.toBeInTheDocument()
+	})
+
+	it("shows interrupted tag when item is a background task with interrupted status", () => {
+		const interruptedItem = { ...mockItem, background: true, status: "interrupted" as const }
+		render(<TaskItemFooter item={interruptedItem} variant="full" />)
+
+		expect(screen.getByText("history:interruptedTag")).toBeInTheDocument()
+		expect(screen.queryByText("history:backgroundTag")).not.toBeInTheDocument()
+	})
+
+	it("shows background tag instead of interrupted for active background tasks", () => {
+		const activeBackgroundItem = { ...mockItem, background: true, status: "active" as const }
+		render(<TaskItemFooter item={activeBackgroundItem} variant="full" />)
+
+		expect(screen.getByText("history:backgroundTag")).toBeInTheDocument()
+		expect(screen.queryByText("history:interruptedTag")).not.toBeInTheDocument()
+	})
 })
