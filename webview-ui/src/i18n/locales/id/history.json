@@ -56,5 +56,14 @@
 	"subtaskTag": "Subtask",
 	"deleteWithSubtasks": "Ini juga akan menghapus {{count}} subtask. Apakah Anda yakin?",
 	"expandSubtasks": "Perluas subtask",
-	"collapseSubtasks": "Tutup subtask"
+	"collapseSubtasks": "Tutup subtask",
+	"backgroundTag": "Latar belakang",
+	"interruptedTag": "Terinterupsi",
+	"showBackgroundTasks": "Tampilkan tugas latar belakang",
+	"hideBackgroundTasks": "Sembunyikan tugas latar belakang",
+	"filter": {
+		"prefix": "Filter:",
+		"all": "Semua Tugas",
+		"foregroundOnly": "Hanya Latar Depan"
+	}
 }
