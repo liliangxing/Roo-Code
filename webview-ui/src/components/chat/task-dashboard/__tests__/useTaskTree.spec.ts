@@ -1,5 +1,5 @@
 import type { HistoryItem } from "@roo-code/types"
-import { buildTaskTree } from "../useTaskTree"
+import { buildTaskTree, countTreeNodes } from "../useTaskTree"
 
 function makeItem(overrides: Partial<HistoryItem> & { id: string }): HistoryItem {
 	return {
@@ -18,6 +18,7 @@ describe("buildTaskTree", () => {
 		const result = buildTaskTree([], undefined)
 		expect(result.rootNode).toBeNull()
 		expect(result.hasDelegationHierarchy).toBe(false)
+		expect(result.taskCount).toBe(0)
 	})
 
 	it("returns null when current task has no delegation hierarchy", () => {
@@ -25,6 +26,7 @@ describe("buildTaskTree", () => {
 		const result = buildTaskTree([item], item)
 		expect(result.rootNode).toBeNull()
 		expect(result.hasDelegationHierarchy).toBe(false)
+		expect(result.taskCount).toBe(0)
 	})
 
 	it("builds a simple parent-child tree", () => {
@@ -52,6 +54,7 @@ describe("buildTaskTree", () => {
 		expect(result.rootNode!.item.id).toBe("parent-1")
 		expect(result.rootNode!.children).toHaveLength(1)
 		expect(result.rootNode!.children[0].item.id).toBe("child-1")
+		expect(result.taskCount).toBe(2)
 	})
 
 	it("builds a tree when current task is the root", () => {
@@ -214,6 +217,75 @@ describe("buildTaskTree", () => {
 		expect(result.rootNode!.children[0].item.id).toBe("child")
 	})
 
+	it("returns correct taskCount for deep trees", () => {
+		const root = makeItem({
+			id: "root",
+			task: "Root task",
+			mode: "orchestrator",
+			status: "delegated",
+			childIds: ["mid"],
+		})
+		const mid = makeItem({
+			id: "mid",
+			task: "Middle task",
+			mode: "architect",
+			status: "delegated",
+			rootTaskId: "root",
+			parentTaskId: "root",
+			childIds: ["leaf"],
+		})
+		const leaf = makeItem({
+			id: "leaf",
+			task: "Leaf task",
+			mode: "code",
+			status: "active",
+			rootTaskId: "root",
+			parentTaskId: "mid",
+		})
+		const history = [root, mid, leaf]
+
+		const result = buildTaskTree(history, leaf)
+		expect(result.taskCount).toBe(3)
+	})
+
+	it("returns correct taskCount for multiple children", () => {
+		const root = makeItem({
+			id: "root",
+			task: "Root task",
+			mode: "orchestrator",
+			status: "delegated",
+			childIds: ["child-a", "child-b", "child-c"],
+		})
+		const childA = makeItem({
+			id: "child-a",
+			task: "Task A",
+			mode: "code",
+			status: "completed",
+			rootTaskId: "root",
+			parentTaskId: "root",
+		})
+		const childB = makeItem({
+			id: "child-b",
+			task: "Task B",
+			mode: "debug",
+			status: "completed",
+			rootTaskId: "root",
+			parentTaskId: "root",
+		})
+		const childC = makeItem({
+			id: "child-c",
+			task: "Task C",
+			mode: "code",
+			status: "active",
+			rootTaskId: "root",
+			parentTaskId: "root",
+		})
+		const history = [root, childA, childB, childC]
+
+		const result = buildTaskTree(history, childC)
+		expect(result.taskCount).toBe(4)
+	})
+
 	it("handles missing child items gracefully", () => {
 		const root = makeItem({
 			id: "root",
@@ -235,5 +307,30 @@ describe("buildTaskTree", () => {
 		// Only the existing child should appear
 		expect(result.rootNode!.children).toHaveLength(1)
 		expect(result.rootNode!.children[0].item.id).toBe("existing-child")
+	})
+})
+
+describe("countTreeNodes", () => {
+	it("returns 0 for null", () => {
+		expect(countTreeNodes(null)).toBe(0)
+	})
+
+	it("returns 1 for a single node", () => {
+		const node = { item: makeItem({ id: "single" }), children: [] }
+		expect(countTreeNodes(node)).toBe(1)
+	})
+
+	it("counts all nodes in a tree", () => {
+		const node = {
+			item: makeItem({ id: "root" }),
+			children: [
+				{
+					item: makeItem({ id: "child-1" }),
+					children: [{ item: makeItem({ id: "grandchild" }), children: [] }],
+				},
+				{ item: makeItem({ id: "child-2" }), children: [] },
+			],
+		}
+		expect(countTreeNodes(node)).toBe(4)
 	})
 })

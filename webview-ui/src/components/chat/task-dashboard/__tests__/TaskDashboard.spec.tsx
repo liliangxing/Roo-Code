@@ -92,7 +92,7 @@ describe("TaskDashboard", () => {
 		render(<TaskDashboard />)
 
 		expect(screen.getByTestId("task-dashboard")).toBeTruthy()
-		expect(screen.getByText("Task Delegation")).toBeTruthy()
+		expect(screen.getByText("Task Delegation (2 tasks)")).toBeTruthy()
 	})
 
 	it("displays mode names for each task node", () => {
@@ -256,5 +256,115 @@ describe("TaskDashboard", () => {
 		const activeNode = screen.getByTestId("task-node-child-1")
 		const button = activeNode.querySelector("[role='button']")
 		expect(button?.className).toContain("activeSelection")
+	})
+
+	it("displays task count in the header", () => {
+		const parent = makeItem({
+			id: "parent-1",
+			task: "Root task",
+			mode: "orchestrator",
+			status: "delegated",
+			childIds: ["child-1", "child-2"],
+		})
+		const child1 = makeItem({
+			id: "child-1",
+			task: "Child task 1",
+			mode: "code",
+			status: "completed",
+			rootTaskId: "parent-1",
+			parentTaskId: "parent-1",
+		})
+		const child2 = makeItem({
+			id: "child-2",
+			task: "Child task 2",
+			mode: "debug",
+			status: "active",
+			rootTaskId: "parent-1",
+			parentTaskId: "parent-1",
+		})
+		mockState = {
+			taskHistory: [parent, child1, child2],
+			currentTaskItem: child2,
+			currentTaskId: "child-2",
+			customModes: [],
+		}
+
+		render(<TaskDashboard />)
+
+		expect(screen.getByText("Task Delegation (3 tasks)")).toBeTruthy()
+	})
+
+	it("shows expand/collapse toggle on nodes with children", () => {
+		const parent = makeItem({
+			id: "parent-1",
+			task: "Root task",
+			mode: "orchestrator",
+			status: "delegated",
+			childIds: ["child-1"],
+		})
+		const child = makeItem({
+			id: "child-1",
+			task: "Child task",
+			mode: "code",
+			status: "active",
+			rootTaskId: "parent-1",
+			parentTaskId: "parent-1",
+		})
+		mockState = {
+			taskHistory: [parent, child],
+			currentTaskItem: child,
+			currentTaskId: "child-1",
+			customModes: [],
+		}
+
+		render(<TaskDashboard />)
+
+		// Parent has children so it should have a toggle button
+		expect(screen.getByTestId("task-node-toggle-parent-1")).toBeTruthy()
+
+		// Child has no children so it should NOT have a toggle button
+		expect(screen.queryByTestId("task-node-toggle-child-1")).toBeNull()
+	})
+
+	it("collapses and expands tree node children", () => {
+		const parent = makeItem({
+			id: "parent-1",
+			task: "Root task",
+			mode: "orchestrator",
+			status: "delegated",
+			childIds: ["child-1"],
+		})
+		const child = makeItem({
+			id: "child-1",
+			task: "Child task",
+			mode: "code",
+			status: "active",
+			rootTaskId: "parent-1",
+			parentTaskId: "parent-1",
+		})
+		mockState = {
+			taskHistory: [parent, child],
+			currentTaskItem: child,
+			currentTaskId: "child-1",
+			customModes: [],
+		}
+
+		render(<TaskDashboard />)
+
+		// Children should be visible by default
+		expect(screen.getByTestId("task-node-children-parent-1")).toBeTruthy()
+		expect(screen.getByTestId("task-node-child-1")).toBeTruthy()
+
+		// Click the toggle to collapse
+		fireEvent.click(screen.getByTestId("task-node-toggle-parent-1"))
+
+		// Children container should be hidden
+		expect(screen.queryByTestId("task-node-children-parent-1")).toBeNull()
+
+		// Click again to expand
+		fireEvent.click(screen.getByTestId("task-node-toggle-parent-1"))
+
+		// Children should be visible again
+		expect(screen.getByTestId("task-node-children-parent-1")).toBeTruthy()
 	})
 })

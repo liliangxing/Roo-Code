@@ -37,6 +37,8 @@ interface TaskNodeRowProps {
  */
 const TaskNodeRow = memo(({ node, depth, currentTaskId, modeMap }: TaskNodeRowProps) => {
 	const { item, children } = node
+	const hasChildren = children.length > 0
+	const [isNodeExpanded, setIsNodeExpanded] = useState(true)
 	const isCurrentTask = item.id === currentTaskId
 	const modeConfig = item.mode ? modeMap.get(item.mode) : undefined
 	const modeName = modeConfig?.name ?? item.mode ?? "Unknown"
@@ -57,6 +59,11 @@ const TaskNodeRow = memo(({ node, depth, currentTaskId, modeMap }: TaskNodeRowPr
 		[handleClick],
 	)
 
+	const toggleNodeExpanded = useCallback((e: React.MouseEvent) => {
+		e.stopPropagation()
+		setIsNodeExpanded((prev) => !prev)
+	}, [])
+
 	// Truncate task description for display
 	const taskSummary = item.task.length > 60 ? item.task.slice(0, 57) + "..." : item.task
 
@@ -64,7 +71,7 @@ const TaskNodeRow = memo(({ node, depth, currentTaskId, modeMap }: TaskNodeRowPr
 		<div data-testid={`task-node-${item.id}`}>
 			<div
 				className={cn(
-					"group flex items-center gap-2 py-1.5 px-2 cursor-pointer rounded-sm transition-colors",
+					"group flex items-center gap-1 py-1.5 px-2 cursor-pointer rounded-sm transition-colors",
 					"hover:bg-vscode-list-hoverBackground",
 					isCurrentTask &&
 						"bg-vscode-list-activeSelectionBackground/20 border-l-2 border-vscode-charts-green",
@@ -75,6 +82,19 @@ const TaskNodeRow = memo(({ node, depth, currentTaskId, modeMap }: TaskNodeRowPr
 				role="button"
 				tabIndex={0}
 				onKeyDown={handleKeyDown}>
+				{/* Expand/collapse toggle for nodes with children */}
+				{hasChildren ? (
+					<button
+						className="shrink-0 p-0 bg-transparent border-none cursor-pointer text-vscode-descriptionForeground hover:text-vscode-foreground flex items-center"
+						onClick={toggleNodeExpanded}
+						data-testid={`task-node-toggle-${item.id}`}
+						aria-label={isNodeExpanded ? "Collapse" : "Expand"}>
+						{isNodeExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+					</button>
+				) : (
+					<span className="shrink-0 size-3" />
+				)}
+
 				{/* Mode icon/indicator */}
 				<span
 					className={cn(
@@ -109,16 +129,20 @@ const TaskNodeRow = memo(({ node, depth, currentTaskId, modeMap }: TaskNodeRowPr
 				</span>
 			</div>
 
-			{/* Render children */}
-			{children.map((child) => (
-				<TaskNodeRow
-					key={child.item.id}
-					node={child}
-					depth={depth + 1}
-					currentTaskId={currentTaskId}
-					modeMap={modeMap}
-				/>
-			))}
+			{/* Render children (collapsible) */}
+			{hasChildren && isNodeExpanded && (
+				<div data-testid={`task-node-children-${item.id}`}>
+					{children.map((child) => (
+						<TaskNodeRow
+							key={child.item.id}
+							node={child}
+							depth={depth + 1}
+							currentTaskId={currentTaskId}
+							modeMap={modeMap}
+						/>
+					))}
+				</div>
+			)}
 		</div>
 	)
 })
@@ -134,7 +158,7 @@ TaskNodeRow.displayName = "TaskNodeRow"
  */
 const TaskDashboard = () => {
 	const { taskHistory, currentTaskItem, currentTaskId, customModes } = useExtensionState()
-	const { rootNode, hasDelegationHierarchy } = useTaskTree(taskHistory, currentTaskItem)
+	const { rootNode, hasDelegationHierarchy, taskCount } = useTaskTree(taskHistory, currentTaskItem)
 	const [isExpanded, setIsExpanded] = useState(true)
 
 	// Build a mode lookup map
@@ -171,7 +195,9 @@ const TaskDashboard = () => {
 				data-testid="task-dashboard-toggle">
 				{isExpanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
 				<GitBranch className="size-3.5" />
-				<span>Task Delegation</span>
+				<span>
+					Task Delegation ({taskCount} {taskCount === 1 ? "task" : "tasks"})
+				</span>
 			</button>
 
 			{/* Tree content */}

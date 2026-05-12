@@ -19,6 +19,20 @@ export interface TaskTreeResult {
 	rootNode: TaskTreeNode | null
 	/** Whether the current task is part of a delegation hierarchy */
 	hasDelegationHierarchy: boolean
+	/** Total number of tasks in the delegation tree */
+	taskCount: number
+}
+
+/**
+ * Count the total number of nodes in a task tree.
+ */
+export function countTreeNodes(node: TaskTreeNode | null): number {
+	if (!node) return 0
+	let count = 1
+	for (const child of node.children) {
+		count += countTreeNodes(child)
+	}
+	return count
 }
 
 /**
@@ -31,7 +45,7 @@ export interface TaskTreeResult {
  */
 export function buildTaskTree(taskHistory: HistoryItem[], currentTaskItem?: HistoryItem): TaskTreeResult {
 	if (!currentTaskItem) {
-		return { rootNode: null, hasDelegationHierarchy: false }
+		return { rootNode: null, hasDelegationHierarchy: false, taskCount: 0 }
 	}
 
 	// Determine the root task ID for the current session.
@@ -44,7 +58,7 @@ export function buildTaskTree(taskHistory: HistoryItem[], currentTaskItem?: Hist
 
 	// Need at least 2 tasks for a delegation hierarchy
 	if (sessionTasks.length < 2) {
-		return { rootNode: null, hasDelegationHierarchy: false }
+		return { rootNode: null, hasDelegationHierarchy: false, taskCount: 0 }
 	}
 
 	// Build lookup by id
@@ -76,11 +90,11 @@ export function buildTaskTree(taskHistory: HistoryItem[], currentTaskItem?: Hist
 
 	const rootItem = taskMap.get(rootId)
 	if (!rootItem) {
-		return { rootNode: null, hasDelegationHierarchy: false }
+		return { rootNode: null, hasDelegationHierarchy: false, taskCount: 0 }
 	}
 
 	const rootNode = buildNode(rootItem, new Set())
-	return { rootNode, hasDelegationHierarchy: true }
+	return { rootNode, hasDelegationHierarchy: true, taskCount: countTreeNodes(rootNode) }
 }
 
 /**
