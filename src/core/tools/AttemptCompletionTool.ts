@@ -78,6 +78,14 @@ export class AttemptCompletionTool extends BaseTool<"attempt_completion"> {
 
 			task.consecutiveMistakeCount = 0
 
+			// Background task completion: deliver result via callback, no UI interaction
+			if (task.isBackgroundTask && task.onBackgroundComplete) {
+				task.onBackgroundComplete(task.taskId, result)
+				this.emitTaskCompleted(task)
+				pushToolResult("")
+				return
+			}
+
 			await task.say("completion_result", result, undefined, false)
 
 			// Check for subtask using parentTaskId (metadata-driven delegation)

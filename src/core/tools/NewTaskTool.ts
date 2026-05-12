@@ -1,10 +1,7 @@
 import * as vscode from "vscode"
 
 import { TodoItem } from "@roo-code/types"
-<<<<<<< HEAD
 import type { SubtaskQueueItem } from "@roo-code/types"
-=======
->>>>>>> 6c51a5d52 (fix: three bugs in task permissions - parser, deniedTools exemption, pattern merging)
 import { type TaskPermissions, taskPermissionsSchema, toTaskPermissions } from "@roo-code/types"
 
 import { Task } from "../task/Task"
@@ -22,14 +19,18 @@ interface NewTaskParams {
 	todos?: string
 	task_queue?: string
 	permissions?: string
+	/** When true, the task runs in the background concurrently with the parent. Read-only tools only. */
+	background?: string
 }
 
 export class NewTaskTool extends BaseTool<"new_task"> {
 	readonly name = "new_task" as const
 
 	async execute(params: NewTaskParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { mode, message, todos, task_queue, permissions: permissionsJson } = params
+		const { mode, message, todos, task_queue, permissions: permissionsJson, background } = params
+		const { mode, message, todos, background } = params
 		const { askApproval, handleError, pushToolResult } = callbacks
+		const isBackground = background === "true"
 
 		try {
 			// Validate required parameters.
@@ -67,7 +68,8 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 
 			// Check if todos are required based on VSCode setting.
 			// Note: `undefined` means not provided, empty string is valid.
-			if (requireTodos && todos === undefined) {
+			// Background tasks don't require todos (they're read-only).
+			if (requireTodos && todos === undefined && !isBackground) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
 				task.didToolFailInCurrentTurn = true
@@ -172,11 +174,35 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				todos: todoItems,
 				taskQueue: queueItems.length > 0 ? queueItems : undefined,
 				...(parsedPermissions ? { permissions: parsedPermissions } : {}),
+				background: isBackground,
 			})
 
 			const didApprove = await askApproval("tool", toolMessage)
 
 			if (!didApprove) {
+				return
+			}
+
+			if (isBackground) {
+				// Spawn as a background task - parent continues executing
+				try {
+					const bgTask = await (provider as any).spawnBackgroundTask({
+						parentTaskId: task.taskId,
+						message: unescapedMessage,
+						mode,
+					})
+					pushToolResult(
+						`Background task ${bgTask.taskId} spawned in ${targetMode.name} mode. ` +
+							`It will run concurrently with read-only tools. ` +
+							`Results will be delivered when it completes.`,
+					)
+				} catch (error) {
+					pushToolResult(
+						formatResponse.toolError(
+							`Failed to spawn background task: ${error instanceof Error ? error.message : String(error)}`,
+						),
+					)
+				}
 				return
 			}
 

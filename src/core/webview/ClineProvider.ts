@@ -84,6 +84,7 @@ import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
 import { buildTaskContext } from "../task/TaskContextBuilder"
+import { BackgroundTaskRunner, BACKGROUND_TASK_ALLOWED_TOOLS } from "../task/BackgroundTaskRunner"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
 import type { ClineMessage, TodoItem, SubtaskQueueItem, TaskPermissions, ContextHandoffSummary } from "@roo-code/types"
@@ -143,6 +144,7 @@ export class ClineProvider
 	private recentTasksCache?: string[]
 	public readonly taskHistoryStore: TaskHistoryStore
 	private taskHistoryStoreInitialized = false
+	public readonly backgroundTaskRunner: BackgroundTaskRunner = new BackgroundTaskRunner()
 	private globalStateWriteThroughTimer: ReturnType<typeof setTimeout> | null = null
 	private static readonly GLOBAL_STATE_WRITE_THROUGH_DEBOUNCE_MS = 5000 // 5 seconds
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -651,6 +653,10 @@ export class ClineProvider
 
 		this._disposed = true
 		this.log("Disposing ClineProvider...")
+
+		// Cancel all background tasks first.
+		await this.backgroundTaskRunner.dispose()
+		this.log("Disposed background task runner")
 
 		// Clear all tasks from the stack.
 		while (this.clineStack.length > 0) {
@@ -3162,6 +3168,128 @@ export class ClineProvider
 		}
 
 		return child
+	}
+
+	/**
+	 * Spawn a background task that runs concurrently alongside the foreground task.
+	 * Background tasks are:
+	 * - Completely webview-silent (no UI updates)
+	 * - Auto-approved for all tool uses (no user interaction)
+	 * - Restricted to read-only tools only
+	 * - Tracked by the BackgroundTaskRunner with timeout enforcement
+	 *
+	 * The parent task continues executing while the background task runs.
+	 * Results are delivered asynchronously via the onBackgroundComplete callback.
+	 */
+	public async spawnBackgroundTask(params: { parentTaskId: string; message: string; mode: string }): Promise<Task> {
+		const { parentTaskId, message, mode } = params
+
+		if (!this.backgroundTaskRunner.canAcceptTask) {
+			throw new Error(
+				`[spawnBackgroundTask] Cannot spawn background task: concurrency limit reached ` +
+					`(${this.backgroundTaskRunner.activeCount} active)`,
+			)
+		}
+
+		// Get parent task for lineage
+		const parent = this.getCurrentTask()
+		if (!parent || parent.taskId !== parentTaskId) {
+			throw new Error(`[spawnBackgroundTask] Parent task mismatch or not found: ${parentTaskId}`)
+		}
+
+		const { apiConfiguration, experiments } = await this.getState()
+
+		// Switch mode for the background task's context
+		const savedMode = (await this.getState()).mode
+
+		try {
+			await this.handleModeSwitch(mode as any)
+		} catch (e) {
+			this.log(
+				`[spawnBackgroundTask] handleModeSwitch failed for mode '${mode}': ${
+					(e as Error)?.message ?? String(e)
+				}`,
+			)
+		}
+
+		// Create the background task - NOT added to clineStack
+		const backgroundTask = new Task({
+			provider: this,
+			apiConfiguration,
+			task: message,
+			experiments,
+			rootTask: this.clineStack.length > 0 ? this.clineStack[0] : undefined,
+			parentTask: parent,
+			taskNumber: -1, // Background tasks don't get a sequential number
+			isBackgroundTask: true,
+			enableCheckpoints: false, // Read-only tasks have nothing to checkpoint
+			startTask: false,
+			initialStatus: "active",
+			onBackgroundComplete: (taskId: string, result: string) => {
+				this.handleBackgroundTaskComplete(taskId, result)
+			},
+		})
+
+		// Restore the original mode for the foreground task
+		try {
+			await this.handleModeSwitch(savedMode as any)
+		} catch (e) {
+			this.log(
+				`[spawnBackgroundTask] Failed to restore mode '${savedMode}': ${(e as Error)?.message ?? String(e)}`,
+			)
+		}
+
+		// Register with the background task runner (handles timeout, tracking)
+		this.backgroundTaskRunner.registerTask(backgroundTask, parentTaskId)
+
+		// Start the task (it will auto-approve all tools and skip webview updates)
+		backgroundTask.start()
+
+		this.log(
+			`[spawnBackgroundTask] Background task ${backgroundTask.taskId} spawned ` +
+				`(parent: ${parentTaskId}, mode: ${mode})`,
+		)
+
+		return backgroundTask
+	}
+
+	/**
+	 * Handle completion of a background task. Injects the result into the parent
+	 * task's API conversation as a system message.
+	 */
+	private async handleBackgroundTaskComplete(taskId: string, result: string): Promise<void> {
+		const info = this.backgroundTaskRunner.onTaskCompleted(taskId)
+
+		if (!info) {
+			this.log(`[handleBackgroundTaskComplete] Task ${taskId} not found in background runner`)
+			return
+		}
+
+		const parentTaskId = info.parentTaskId
+		const currentTask = this.getCurrentTask()
+
+		// If the parent is currently the foreground task, inject the result directly
+		if (currentTask && currentTask.taskId === parentTaskId) {
+			const resultMessage = [`Background task ${taskId} completed.`, ``, `Result:`, result].join("\n")
+
+			// Inject as a system-level message into the parent's conversation
+			try {
+				await currentTask.say("subtask_result", resultMessage)
+			} catch (error) {
+				this.log(
+					`[handleBackgroundTaskComplete] Failed to inject result into parent ${parentTaskId}: ${
+						error instanceof Error ? error.message : String(error)
+					}`,
+				)
+			}
+		} else {
+			// Parent is not the current foreground task (e.g., it was delegated).
+			// Store the result for later retrieval when the parent resumes.
+			this.log(
+				`[handleBackgroundTaskComplete] Parent ${parentTaskId} is not foreground. ` +
+					`Background task ${taskId} result will not be injected automatically.`,
+			)
+		}
 	}
 
 	/**
