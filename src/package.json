@@ -20,7 +20,7 @@
 		"type": "git",
 		"url": "https://github.com/RooCodeInc/Roo-Code"
 	},
-	"homepage": "https://roocode.com",
+	"homepage": "https://roocode.github.io",
 	"categories": [
 		"AI",
 		"Chat",
@@ -84,11 +84,6 @@
 				"command": "roo-cline.popoutButtonClicked",
 				"title": "%command.openInEditor.title%",
 				"icon": "$(link-external)"
-			},
-			{
-				"command": "roo-cline.cloudButtonClicked",
-				"title": "%command.cloud.title%",
-				"icon": "$(cloud)"
 			},
 			{
 				"command": "roo-cline.settingsButtonClicked",
@@ -224,11 +219,6 @@
 					"when": "view == roo-cline.SidebarProvider"
 				},
 				{
-					"command": "roo-cline.cloudButtonClicked",
-					"group": "navigation@3",
-					"when": "view == roo-cline.SidebarProvider"
-				},
-				{
 					"command": "roo-cline.historyButtonClicked",
 					"group": "overflow@1",
 					"when": "view == roo-cline.SidebarProvider"
@@ -253,11 +243,6 @@
 				{
 					"command": "roo-cline.settingsButtonClicked",
 					"group": "navigation@2",
-					"when": "activeWebviewPanelId == roo-cline.TabPanelProvider"
-				},
-				{
-					"command": "roo-cline.cloudButtonClicked",
-					"group": "navigation@3",
 					"when": "activeWebviewPanelId == roo-cline.TabPanelProvider"
 				},
 				{
@@ -465,7 +450,6 @@
 		"@mistralai/mistralai": "^1.9.18",
 		"@modelcontextprotocol/sdk": "1.12.0",
 		"@qdrant/js-client-rest": "^1.14.0",
-		"@roo-code/cloud": "workspace:^",
 		"@roo-code/core": "workspace:^",
 		"@roo-code/ipc": "workspace:^",
 		"@roo-code/types": "workspace:^",

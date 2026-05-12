@@ -16,14 +16,6 @@
 		"delete": "Taak verwijderen (Shift + Klik om bevestiging over te slaan)",
 		"condenseContext": "Context intelligent samenvatten",
 		"share": "Taak delen",
-		"shareWithOrganization": "Delen met organisatie",
-		"shareWithOrganizationDescription": "Alleen leden van je organisatie kunnen toegang krijgen",
-		"sharePublicly": "Openbaar delen",
-		"sharePubliclyDescription": "Iedereen met de link kan toegang krijgen",
-		"connectToCloud": "Verbind met Cloud",
-		"connectToCloudDescription": "Meld je aan bij Roo Code Cloud om taken te delen",
-		"sharingDisabledByOrganization": "Delen uitgeschakeld door organisatie",
-		"shareSuccessOrganization": "Organisatielink gekopieerd naar klembord",
 		"shareSuccessPublic": "Openbare link gekopieerd naar klembord",
 		"openApiHistory": "API-geschiedenis openen",
 		"openUiHistory": "UI-geschiedenis openen",
@@ -156,7 +148,7 @@
 			"500": "Provider-serverfout. Er is iets mis aan de kant van de provider, er is niets mis met je verzoek.",
 			"docs": "Documentatie",
 			"goToSettings": "Instellingen",
-			"unknown": "Onbekende API-fout. Neem alsjeblieft contact op met Roo Code-ondersteuning.",
+			"unknown": "Unknown API error. Please report this on GitHub.",
 			"connection": "Verbindingsfout. Zorg ervoor dat je een werkende internetverbinding hebt.",
 			"claudeCodeNotAuthenticated": "Je moet inloggen om Claude Code te gebruiken. Ga naar Instellingen en klik op \"Inloggen bij Claude Code\" om te authenticeren."
 		}
@@ -267,7 +259,7 @@
 		"filesRead": "Gelezen bestanden",
 		"commandsExecuted": "Uitgevoerde opdrachten",
 		"todoStats": "Taken: {{completed}}/{{total}} voltooid",
-"permissionBoundaries": "Machtigingsgrenzen",
+		"permissionBoundaries": "Machtigingsgrenzen",
 		"permissionFilePatterns": "Toegestane bestanden: {{patterns}}",
 		"permissionCommandPatterns": "Toegestane opdrachten: {{patterns}}",
 		"permissionAllowedTools": "Toegestane tools: {{tools}}",
@@ -321,17 +313,12 @@
 	"announcement": {
 		"title": "Roo Code {{version}} uitgebracht",
 		"support": "Steun Roo Code door ons een ster te geven op <githubLink>GitHub</githubLink>.",
-		"stealthModel": {
-			"feature": "<bold>Beperkt tijd GRATIS stealth model</bold> - Code Supernova: Nu geüpgraded met een <bold>1M token contextvenster</bold>! Een veelzijdig agentisch codeermodel dat beeldinvoer ondersteunt, beschikbaar via Roo Code Cloud.",
-			"note": "(Opmerking: prompts en aanvullingen worden gelogd door de modelmaker en gebruikt om het model te verbeteren)",
-			"connectButton": "Verbinden met Roo Code Cloud",
-			"selectModel": "Selecteer <code>roo/code-supernova</code> van de Roo Code Cloud provider in Instellingen om te beginnen.",
-			"goToSettingsButton": "Ga naar Instellingen"
-		},
-		"handoff": {
-			"heading": "De Roo Code-plugin gaat niet weg.",
-			"description": "Je hebt misschien de recente aankondiging gezien dat Roo Code 3 miljoen installaties heeft bereikt en het oorspronkelijke team zich volledig richt op Roomote. We weten dat dat nieuws voor velen van jullie moeilijk was. Deze plugin betekent veel voor ons en voor jou, en we horen je. Het goede nieuws: <bold>een community-team heeft zich aangemeld om Roo Code voort te zetten</bold>, en we werken samen aan een officiële overdracht, zodat de plugin waar je op vertrouwt onderhouden en verbeterd blijft worden.",
-			"readMore": "Lees de originele aankondiging van Matt Rubens"
+		"finalRelease": {
+			"title": "De laatste Roo Code-release",
+			"intro": "Dit is de laatste Roo Code-release. <announcementLink>Zoals we een paar weken geleden hebben aangekondigd</announcementLink>, hebben we besloten onze focus te verleggen naar <roomoteLink>Roomote</roomoteLink>, ons cloud-agentplatform, waarvan we geloven dat het de toekomst van softwareontwikkeling is. Heel erg bedankt voor je steun in het afgelopen jaar of daaromtrent.",
+			"continuity": "Deze extensie zou voor onbepaalde tijd moeten blijven werken, maar ontvangt geen bugfixes, nieuwe functies of modelupdates meer.",
+			"alternatives": "Als je een extensie wilt gebruiken, raden we aan om <zooCodeLink>ZooCode</zooCodeLink> (een Roo Code-fork door de community) en <clineLink>Cline</clineLink> (waar Roo Code oorspronkelijk begon) te bekijken.",
+			"signoff": "Veel codeerplezier!"
 		},
 		"release": {
 			"heading": "Wat is er nieuw:",
@@ -445,11 +432,6 @@
 	"versionIndicator": {
 		"ariaLabel": "Versie {{version}} - Klik om release notes te bekijken"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud evolueert!",
-		"description": "Voer externe agenten uit in de cloud, krijg overal toegang tot je taken, werk samen met anderen en nog veel meer.",
-		"joinWaitlist": "Meld je aan om de laatste updates te ontvangen."
-	},
 	"editMessage": {
 		"placeholder": "Bewerk je bericht..."
 	},
@@ -511,8 +493,9 @@
 	},
 	"retiredProvider": {
 		"title": "Provider wordt niet meer ondersteund",
-		"message": "Sorry, deze provider wordt niet meer ondersteund. We zagen dat heel weinig Roo-gebruikers het daadwerkelijk gebruikten en we moeten de omvang van onze codebase verkleinen zodat we snel kunnen blijven leveren en onze community goed kunnen blijven bedienen. Het was een heel moeilijke beslissing, maar het stelt ons in staat om ons te richten op wat het belangrijkst voor je is. Het is vervelend, dat weten we.",
-		"openSettings": "Instellingen openen"
+		"message": "This provider is no longer supported. Please select a different provider in your API profile settings.",
+		"openSettings": "Instellingen openen",
+		"rooMessage": "As part of our decision to sunset the Roo Code extension, we also ended the Roo Code Router, which only existed to support the extension. Sorry about the hassle."
 	},
 	"contextHandoff": {
 		"title": "Samenvatting contextoverdracht",

@@ -61,24 +61,6 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 								<Link href="/blog">Blog</Link>
 							</NavigationMenuLink>
 						</NavigationMenuItem>
-
-						<NavigationMenuItem>
-							<NavigationMenuLink
-								asChild
-								className={cn(navigationMenuTriggerStyle(), "bg-transparent font-light")}>
-								<Link href="/evals">Evals</Link>
-							</NavigationMenuLink>
-						</NavigationMenuItem>
-
-						<NavigationMenuItem>
-							<NavigationMenuLink
-								asChild
-								className={cn(navigationMenuTriggerStyle(), "bg-transparent font-light")}>
-								<a href={EXTERNAL_LINKS.DISCORD} target="_blank" rel="noopener noreferrer">
-									Discord
-								</a>
-							</NavigationMenuLink>
-						</NavigationMenuItem>
 					</NavigationMenuList>
 				</NavigationMenu>
 
@@ -149,20 +131,6 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 							onClick={() => setIsMenuOpen(false)}>
 							FAQ
 						</ScrollButton>
-						<Link
-							href="/evals"
-							className="block w-full p-5 py-3 text-left text-foreground active:opacity-50"
-							onClick={() => setIsMenuOpen(false)}>
-							Evals
-						</Link>
-						<a
-							href={EXTERNAL_LINKS.DISCORD}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="block w-full p-5 py-3 text-left text-foreground active:opacity-50"
-							onClick={() => setIsMenuOpen(false)}>
-							Discord
-						</a>
 					</div>
 
 					{/* Bottom section with Cloud Login and stats */}

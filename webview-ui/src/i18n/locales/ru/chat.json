@@ -16,14 +16,6 @@
 		"delete": "Удалить задачу (Shift + клик для пропуска подтверждения)",
 		"condenseContext": "Интеллектуально сжать контекст",
 		"share": "Поделиться задачей",
-		"shareWithOrganization": "Поделиться с организацией",
-		"shareWithOrganizationDescription": "Только члены вашей организации могут получить доступ",
-		"sharePublicly": "Поделиться публично",
-		"sharePubliclyDescription": "Любой, у кого есть ссылка, может получить доступ",
-		"connectToCloud": "Подключиться к облаку",
-		"connectToCloudDescription": "Войди в Roo Code Cloud, чтобы делиться задачами",
-		"sharingDisabledByOrganization": "Обмен отключен организацией",
-		"shareSuccessOrganization": "Ссылка организации скопирована в буфер обмена",
 		"shareSuccessPublic": "Публичная ссылка скопирована в буфер обмена",
 		"openApiHistory": "Открыть историю API",
 		"openUiHistory": "Открыть историю UI",
@@ -156,7 +148,7 @@
 			"500": "Ошибка сервера провайдера. На стороне провайдера что-то пошло не так, с вашим запросом все в порядке.",
 			"docs": "Документация",
 			"goToSettings": "Настройки",
-			"unknown": "Неизвестная ошибка API. Пожалуйста, свяжитесь с поддержкой Roo Code.",
+			"unknown": "Unknown API error. Please report this on GitHub.",
 			"connection": "Ошибка подключения. Убедитесь, что у вас есть рабочее подключение к Интернету.",
 			"claudeCodeNotAuthenticated": "Вам необходимо войти в систему, чтобы использовать Claude Code. Перейдите в Настройки и нажмите «Войти в Claude Code» для аутентификации."
 		}
@@ -268,7 +260,7 @@
 		"filesRead": "Прочитанные файлы",
 		"commandsExecuted": "Выполненные команды",
 		"todoStats": "Задачи: {{completed}}/{{total}} выполнено",
-"permissionBoundaries": "Границы разрешений",
+		"permissionBoundaries": "Границы разрешений",
 		"permissionFilePatterns": "Разрешённые файлы: {{patterns}}",
 		"permissionCommandPatterns": "Разрешённые команды: {{patterns}}",
 		"permissionAllowedTools": "Разрешённые инструменты: {{tools}}",
@@ -322,17 +314,12 @@
 	"announcement": {
 		"title": "Выпущен Roo Code {{version}}",
 		"support": "Поддержите Roo Code, поставив нам звезду на <githubLink>GitHub</githubLink>.",
-		"stealthModel": {
-			"feature": "<bold>Бесплатная скрытая модель на ограниченное время</bold> - Code Supernova: Теперь обновлена до <bold>контекстного окна 1M токенов</bold>! Универсальная модель агентного программирования, поддерживающая ввод изображений, доступная через Roo Code Cloud.",
-			"note": "(Примечание: промпты и дополнения записываются создателем модели и используются для её улучшения)",
-			"connectButton": "Подключиться к Roo Code Cloud",
-			"selectModel": "Выберите <code>roo/code-supernova</code> от провайдера Roo Code Cloud в Настройках для начала работы.",
-			"goToSettingsButton": "Перейти к Настройкам"
-		},
-		"handoff": {
-			"heading": "Плагин Roo Code никуда не денется.",
-			"description": "Возможно, ты видел недавнее объявление о том, что Roo Code достиг 3 миллионов установок, а оригинальная команда полностью переключается на Roomote. Мы понимаем, что эта новость была непростой для многих из вас. Этот плагин много значит для нас и для тебя, и мы тебя слышим. Хорошая новость: <bold>команда сообщества взяла на себя задачу продолжать развивать Roo Code</bold>, и мы работаем с ними над официальной передачей, чтобы плагин, на который ты полагаешься, продолжал получать поддержку и улучшения.",
-			"readMore": "Прочитать оригинальное объявление Matt Rubens"
+		"finalRelease": {
+			"title": "Последний релиз Roo Code",
+			"intro": "Это последний релиз Roo Code. <announcementLink>Как мы объявили несколько недель назад</announcementLink>, мы решили сосредоточиться на <roomoteLink>Roomote</roomoteLink>, нашей облачной платформе агентов, которую считаем будущим разработки программного обеспечения. Огромное спасибо за вашу поддержку на протяжении последнего года или около того.",
+			"continuity": "Это расширение должно продолжать работать неопределенно долго, но оно больше не будет получать исправления ошибок, новые функции или обновления моделей.",
+			"alternatives": "Если вы хотите пользоваться расширением, рекомендуем посмотреть <zooCodeLink>ZooCode</zooCodeLink> (форк Roo Code от сообщества) и <clineLink>Cline</clineLink> (проект, с которого изначально начался Roo Code).",
+			"signoff": "Удачного кодинга!"
 		},
 		"release": {
 			"heading": "Что нового:",
@@ -446,11 +433,6 @@
 	"versionIndicator": {
 		"ariaLabel": "Версия {{version}} - Нажмите, чтобы просмотреть примечания к выпуску"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud развивается!",
-		"description": "Запускайте удаленные агенты в облаке, получайте доступ к своим задачам из любого места, сотрудничайте с другими и многое другое.",
-		"joinWaitlist": "Зарегистрируйтесь, чтобы получать последние обновления."
-	},
 	"editMessage": {
 		"placeholder": "Редактировать сообщение..."
 	},
@@ -512,8 +494,9 @@
 	},
 	"retiredProvider": {
 		"title": "Провайдер больше не поддерживается",
-		"message": "К сожалению, этот провайдер больше не поддерживается. Мы заметили, что очень немногие пользователи Roo действительно им пользовались, и нам нужно сократить объём кодовой базы, чтобы продолжать быстро развиваться и хорошо служить нашему сообществу. Это было очень непростое решение, но оно позволяет нам сосредоточиться на том, что для тебя важнее всего. Мы знаем, что это неприятно.",
-		"openSettings": "Открыть настройки"
+		"message": "This provider is no longer supported. Please select a different provider in your API profile settings.",
+		"openSettings": "Открыть настройки",
+		"rooMessage": "As part of our decision to sunset the Roo Code extension, we also ended the Roo Code Router, which only existed to support the extension. Sorry about the hassle."
 	},
 	"contextHandoff": {
 		"title": "Сводка передачи контекста",

@@ -16,14 +16,6 @@
 		"delete": "कार्य हटाएं (पुष्टि को छोड़ने के लिए Shift + क्लिक)",
 		"condenseContext": "संदर्भ को बुद्धिमानी से संघनित करें",
 		"share": "कार्य साझा करें",
-		"shareWithOrganization": "संगठन के साथ साझा करें",
-		"shareWithOrganizationDescription": "केवल आपके संगठन के सदस्य पहुंच सकते हैं",
-		"sharePublicly": "सार्वजनिक रूप से साझा करें",
-		"sharePubliclyDescription": "लिंक वाला कोई भी व्यक्ति पहुंच सकता है",
-		"connectToCloud": "Cloud से कनेक्ट करें",
-		"connectToCloudDescription": "कार्य साझा करने के लिए Roo Code Cloud में साइन इन करें",
-		"sharingDisabledByOrganization": "संगठन द्वारा साझाकरण अक्षम किया गया",
-		"shareSuccessOrganization": "संगठन लिंक क्लिपबोर्ड में कॉपी किया गया",
 		"shareSuccessPublic": "सार्वजनिक लिंक क्लिपबोर्ड में कॉपी किया गया",
 		"openApiHistory": "API इतिहास खोलें",
 		"openUiHistory": "UI इतिहास खोलें",
@@ -161,7 +153,7 @@
 			"500": "प्रदाता सर्वर त्रुटि। प्रदाता की ओर से कुछ गलत है, आपके अनुरोध में कुछ गलत नहीं है।",
 			"docs": "डॉक्स",
 			"goToSettings": "सेटिंग्स",
-			"unknown": "अज्ञात API त्रुटि। कृपया Roo Code सहायता से संपर्क करें।",
+			"unknown": "Unknown API error. Please report this on GitHub.",
 			"connection": "कनेक्शन त्रुटि। सुनिश्चित करें कि आपके पास कार्यशील इंटरनेट कनेक्शन है।",
 			"claudeCodeNotAuthenticated": "Claude Code का उपयोग करने के लिए आपको साइन इन करना होगा। सेटिंग्स में जाएं और प्रमाणित करने के लिए \"Claude Code में साइन इन करें\" पर क्लिक करें।"
 		}
@@ -272,7 +264,7 @@
 		"filesRead": "पढ़ी गई फ़ाइलें",
 		"commandsExecuted": "निष्पादित कमांड",
 		"todoStats": "कार्य: {{completed}}/{{total}} पूर्ण",
-"permissionBoundaries": "अनुमति सीमाएँ",
+		"permissionBoundaries": "अनुमति सीमाएँ",
 		"permissionFilePatterns": "अनुमत फ़ाइलें: {{patterns}}",
 		"permissionCommandPatterns": "अनुमत कमांड: {{patterns}}",
 		"permissionAllowedTools": "अनुमत टूल: {{tools}}",
@@ -348,17 +340,12 @@
 	"announcement": {
 		"title": "Roo Code {{version}} रिलीज़ हुआ",
 		"support": "कृपया <githubLink>GitHub</githubLink> पर हमें स्टार देकर Roo Code का समर्थन करें।",
-		"stealthModel": {
-			"feature": "<bold>सीमित समय के लिए मुफ़्त स्टेल्थ मॉडल</bold> - Code Supernova: अब <bold>1M Token संदर्भ विंडो</bold> के साथ अपग्रेड हुआ! एक बहुमुखी एजेंटिक कोडिंग मॉडल जो छवि इनपुट का समर्थन करता है, Roo Code Cloud के माध्यम से उपलब्ध।",
-			"note": "(नोट: प्रॉम्प्ट्स और कम्प्लीशन्स मॉडल निर्माता द्वारा लॉग किए जाते हैं और मॉडल को बेहतर बनाने के लिए उपयोग किए जाते हैं)",
-			"connectButton": "Roo Code Cloud से कनेक्ट करें",
-			"selectModel": "आरंभ करने के लिए सेटिंग्स में Roo Code Cloud प्रोवाइडर से <code>roo/code-supernova</code> चुनें।",
-			"goToSettingsButton": "सेटिंग्स पर जाएं"
-		},
-		"handoff": {
-			"heading": "Roo Code plugin कहीं नहीं जा रहा है।",
-			"description": "आपने शायद हाल ही की घोषणा देखी होगी कि Roo Code ने 30 लाख installs पार कर लिए हैं और मूल टीम पूरी तरह Roomote पर focus कर रही है। हम जानते हैं कि यह खबर आप में से कई के लिए कठिन थी। यह plugin हमारे और आपके लिए बहुत मायने रखता है, और हम आपकी बात सुन रहे हैं। अच्छी खबर: <bold>एक community team ने Roo Code को आगे ले जाने की ज़िम्मेदारी ली है</bold>, और हम उनके साथ एक आधिकारिक handoff पर काम कर रहे हैं ताकि जिस plugin पर आप भरोसा करते हैं, उसका maintenance और improvement जारी रहे।",
-			"readMore": "Matt Rubens की मूल घोषणा पढ़ें"
+		"finalRelease": {
+			"title": "Roo Code की आखिरी रिलीज़",
+			"intro": "यह Roo Code की आखिरी रिलीज़ है। <announcementLink>जैसा कि हमने कुछ हफ्ते पहले घोषणा की थी</announcementLink>, हमने अपना ध्यान <roomoteLink>Roomote</roomoteLink> पर केंद्रित करने का निर्णय लिया है, जो हमारा क्लाउड एजेंट प्लेटफ़ॉर्म है और जिसे हम सॉफ़्टवेयर डेवलपमेंट का भविष्य मानते हैं। पिछले लगभग एक साल में आपके समर्थन के लिए बहुत धन्यवाद।",
+			"continuity": "यह एक्सटेंशन अनिश्चित समय तक काम करता रहना चाहिए, लेकिन इसे बग फ़िक्स, नई सुविधाएँ या मॉडल अपडेट नहीं मिलेंगे।",
+			"alternatives": "यदि आप कोई एक्सटेंशन उपयोग करना चाहते हैं, तो हम <zooCodeLink>ZooCode</zooCodeLink> (समुदाय द्वारा बनाया गया Roo Code fork) और <clineLink>Cline</clineLink> (जहाँ से Roo Code मूल रूप से शुरू हुआ था) देखने की सलाह देते हैं।",
+			"signoff": "हैप्पी कोडिंग!"
 		},
 		"release": {
 			"heading": "नया क्या है:",
@@ -445,11 +432,6 @@
 	"versionIndicator": {
 		"ariaLabel": "संस्करण {{version}} - रिलीज़ नोट्स देखने के लिए क्लिक करें"
 	},
-	"rooCloudCTA": {
-		"title": "Roo Code Cloud विकसित हो रहा है!",
-		"description": "क्लाउड में रिमोट एजेंट चलाएं, कहीं से भी अपने कार्यों तक पहुंचें, दूसरों के साथ सहयोग करें, और बहुत कुछ।",
-		"joinWaitlist": "नवीनतम अपडेट प्राप्त करने के लिए साइन अप करें।"
-	},
 	"editMessage": {
 		"placeholder": "अपना संदेश संपादित करें..."
 	},
@@ -511,8 +493,9 @@
 	},
 	"retiredProvider": {
 		"title": "प्रदाता अब समर्थित नहीं है",
-		"message": "क्षमा करें, यह प्रदाता अब समर्थित नहीं है। हमने देखा कि बहुत कम Roo उपयोगकर्ता वास्तव में इसका उपयोग कर रहे थे और हमें अपने कोडबेस का दायरा कम करने की आवश्यकता है ताकि हम तेज़ी से काम करना और अपने समुदाय की अच्छी सेवा करना जारी रख सकें। यह वाकई एक कठिन निर्णय था, लेकिन इससे हम उस पर ध्यान केंद्रित कर सकते हैं जो तुम्हारे लिए सबसे ज़्यादा मायने रखता है। हम जानते हैं, यह बुरा लगता है।",
-		"openSettings": "सेटिंग्स खोलें"
+		"message": "This provider is no longer supported. Please select a different provider in your API profile settings.",
+		"openSettings": "सेटिंग्स खोलें",
+		"rooMessage": "As part of our decision to sunset the Roo Code extension, we also ended the Roo Code Router, which only existed to support the extension. Sorry about the hassle."
 	},
 	"contextHandoff": {
 		"title": "कॉन्टेक्स्ट हैंडऑफ़ सारांश",
