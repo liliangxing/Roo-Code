@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { contextHandoffSummarySchema } from "./context-handoff.js"
 import { taskPermissionsSchema } from "./task-permissions.js"
 
 /**
@@ -28,6 +29,7 @@ export const historyItemSchema = z.object({
 	awaitingChildId: z.string().optional(), // Child currently awaited (set when delegated)
 	completedByChildId: z.string().optional(), // Child that completed and resumed this parent
 	completionResultSummary: z.string().optional(), // Summary from completed child
+	contextHandoffSummary: contextHandoffSummarySchema.optional(), // Structured context from completed child
 	taskPermissions: taskPermissionsSchema.optional(), // Permission boundaries set by parent task
 })
 
