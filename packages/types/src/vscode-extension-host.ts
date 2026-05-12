@@ -352,6 +352,9 @@ export type ExtensionState = Pick<
 	openAiCodexIsAuthenticated?: boolean
 	debug?: boolean
 
+	/** Background tasks status for the UI panel */
+	backgroundTasks?: BackgroundTaskStatusInfo[]
+
 	/**
 	 * Monotonically increasing sequence number for clineMessages state pushes.
 	 * When present, the frontend should only apply clineMessages from a state push
@@ -359,6 +362,21 @@ export type ExtensionState = Pick<
 	 * (captured during async getStateToPostToWebview) from overwriting newer messages.
 	 */
 	clineMessagesSeq?: number
+}
+
+/**
+ * Status of a background task as exposed to the webview UI.
+ */
+export interface BackgroundTaskStatusInfo {
+	taskId: string
+	parentTaskId: string
+	status: "running" | "completed" | "cancelled" | "timed_out" | "error"
+	startedAt: number
+	completedAt?: number
+	/** Short summary of the result (from attempt_completion) */
+	resultSummary?: string
+	/** The mode slug the background task was running in */
+	mode?: string
 }
 
 export interface Command {
@@ -541,6 +559,8 @@ export interface WebviewMessage {
 		| "createWorktreeInclude"
 		| "checkoutBranch"
 		| "browseForWorktreePath"
+		// Background task messages
+		| "cancelBackgroundTask"
 		// Skills messages
 		| "requestSkills"
 		| "createSkill"

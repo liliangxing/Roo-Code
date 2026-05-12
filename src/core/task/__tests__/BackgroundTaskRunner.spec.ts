@@ -223,4 +223,147 @@ describe("BackgroundTaskRunner", () => {
 			expect(runner.getTaskInfo("unknown")).toBeUndefined()
 		})
 	})
+
+	describe("getTasksStatus", () => {
+		it("should return empty array when no tasks", () => {
+			expect(runner.getTasksStatus()).toEqual([])
+		})
+
+		it("should return running tasks with correct status", () => {
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+
+			const statuses = runner.getTasksStatus()
+			expect(statuses).toHaveLength(1)
+			expect(statuses[0].taskId).toBe("task-1")
+			expect(statuses[0].parentTaskId).toBe("parent-1")
+			expect(statuses[0].status).toBe("running")
+			expect(statuses[0].startedAt).toBeGreaterThan(0)
+			expect(statuses[0].completedAt).toBeUndefined()
+		})
+
+		it("should include completed tasks after onTaskCompleted", () => {
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+			runner.onTaskCompleted("task-1", "Done!")
+
+			const statuses = runner.getTasksStatus()
+			expect(statuses).toHaveLength(1)
+			expect(statuses[0].taskId).toBe("task-1")
+			expect(statuses[0].status).toBe("completed")
+			expect(statuses[0].resultSummary).toBe("Done!")
+			expect(statuses[0].completedAt).toBeGreaterThan(0)
+		})
+
+		it("should include cancelled tasks after cancelTask", async () => {
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+			await runner.cancelTask("task-1")
+
+			const statuses = runner.getTasksStatus()
+			expect(statuses).toHaveLength(1)
+			expect(statuses[0].status).toBe("cancelled")
+		})
+
+		it("should show both active and completed tasks", () => {
+			const task1 = createMockTask("task-1")
+			const task2 = createMockTask("task-2")
+			runner.registerTask(task1, "parent-1")
+			runner.registerTask(task2, "parent-1")
+			runner.onTaskCompleted("task-1", "Result 1")
+
+			const statuses = runner.getTasksStatus()
+			expect(statuses).toHaveLength(2)
+			// Active task
+			const active = statuses.find((s) => s.taskId === "task-2")
+			expect(active?.status).toBe("running")
+			// Completed task
+			const completed = statuses.find((s) => s.taskId === "task-1")
+			expect(completed?.status).toBe("completed")
+		})
+	})
+
+	describe("completed tasks buffer", () => {
+		it("should limit completed tasks to MAX_COMPLETED_TASKS (10)", () => {
+			// Register and complete 12 tasks
+			for (let i = 0; i < 12; i++) {
+				const task = createMockTask(`task-${i}`)
+				runner.registerTask(task, "parent-1")
+				runner.onTaskCompleted(`task-${i}`, `Result ${i}`)
+			}
+
+			const completed = runner.getCompletedTasks()
+			expect(completed).toHaveLength(10)
+			// Should keep the most recent 10
+			expect(completed[0].taskId).toBe("task-2")
+			expect(completed[9].taskId).toBe("task-11")
+		})
+
+		it("should clear completed tasks", () => {
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+			runner.onTaskCompleted("task-1", "Done")
+
+			expect(runner.getCompletedTasks()).toHaveLength(1)
+			runner.clearCompletedTasks()
+			expect(runner.getCompletedTasks()).toHaveLength(0)
+		})
+	})
+
+	describe("onStateChanged callback", () => {
+		it("should be called when a task is registered", () => {
+			const callback = vi.fn()
+			runner.onStateChanged = callback
+
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+
+			expect(callback).toHaveBeenCalledTimes(1)
+		})
+
+		it("should be called when a task is completed", () => {
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+
+			const callback = vi.fn()
+			runner.onStateChanged = callback
+			runner.onTaskCompleted("task-1", "Done")
+
+			expect(callback).toHaveBeenCalledTimes(1)
+		})
+
+		it("should be called when a task is cancelled", async () => {
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+
+			const callback = vi.fn()
+			runner.onStateChanged = callback
+			await runner.cancelTask("task-1")
+
+			expect(callback).toHaveBeenCalledTimes(1)
+		})
+
+		it("should not throw if onStateChanged is not set", () => {
+			const task = createMockTask("task-1")
+			runner.onStateChanged = undefined
+			expect(() => runner.registerTask(task, "parent-1")).not.toThrow()
+		})
+	})
+
+	describe("timeout tracking", () => {
+		it("should record timed_out status when task times out", async () => {
+			const task = createMockTask("task-1")
+			runner.registerTask(task, "parent-1")
+
+			// Advance past timeout
+			vi.advanceTimersByTime(DEFAULT_BACKGROUND_TASK_TIMEOUT_MS + 1000)
+
+			// Wait for async timeoutTask
+			await vi.runAllTimersAsync()
+
+			const statuses = runner.getTasksStatus()
+			const timedOut = statuses.find((s) => s.taskId === "task-1")
+			expect(timedOut?.status).toBe("timed_out")
+		})
+	})
 })
