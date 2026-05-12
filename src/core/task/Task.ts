@@ -103,6 +103,7 @@ import { restoreTodoListForTask } from "../tools/UpdateTodoListTool"
 import { FileContextTracker } from "../context-tracking/FileContextTracker"
 import { RooIgnoreController } from "../ignore/RooIgnoreController"
 import { RooProtectedController } from "../protect/RooProtectedController"
+import { getFileLockManager } from "../../services/file-lock"
 import { type AssistantMessageContent, presentAssistantMessage } from "../assistant-message"
 import { NativeToolCallParser } from "../assistant-message/NativeToolCallParser"
 import { manageContext, willManageContext } from "../context-management"
@@ -2359,6 +2360,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			TerminalRegistry.releaseTerminalsForTask(this.taskId)
 		} catch (error) {
 			console.error("Error releasing terminals:", error)
+		}
+
+		// Phase 7b: Release any file locks held by this task to prevent stale locks
+		// from blocking other tasks after this task is disposed/aborted.
+		try {
+			getFileLockManager().releaseAllLocks(this.taskId)
+		} catch (error) {
+			console.error("Error releasing file locks:", error)
 		}
 
 		// Cleanup command output artifacts
