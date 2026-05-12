@@ -1,5 +1,5 @@
 import type { ToolName, ModeConfig, ExperimentId, GroupOptions, GroupEntry, TaskPermissions } from "@roo-code/types"
-import { toolNames as validToolNames, matchesAnyPattern, matchesAllPatternLayers } from "@roo-code/types"
+import { toolNames as validToolNames, matchesAllPatternLayers } from "@roo-code/types"
 import { customToolRegistry } from "@roo-code/core"
 
 import { type Mode, FileRestrictionError, getModeBySlug, getGroupName } from "../../shared/modes"
@@ -170,9 +170,12 @@ export function isToolAllowedForMode(
 			}
 		}
 
-		// Check filePatterns using layered enforcement (AND between layers, OR within each layer).
-		// Falls back to flat filePatterns if no layers are present.
-		const filePatternLayers = taskPermissions._filePatternLayers
+		// Check filePatterns -- use layered enforcement when available (AND between
+		// layers, OR within each layer), fall back to flat filePatterns as a single layer.
+		const filePatternLayers =
+			taskPermissions._filePatternLayers ??
+			(taskPermissions.filePatterns?.length ? [taskPermissions.filePatterns] : undefined)
+
 		if (filePatternLayers && filePatternLayers.length > 0) {
 			const filePath = toolParams?.path || toolParams?.file_path
 			if (filePath && typeof filePath === "string") {
@@ -193,53 +196,18 @@ export function isToolAllowedForMode(
 					}
 				}
 			}
-		} else if (taskPermissions.filePatterns && taskPermissions.filePatterns.length > 0) {
-			// Fallback for non-merged permissions (single layer)
-			const filePath = toolParams?.path || toolParams?.file_path
-			if (filePath && typeof filePath === "string") {
-				if (!matchesAnyPattern(filePath, taskPermissions.filePatterns)) {
-					throw new TaskPermissionError(
-						tool,
-						`File "${filePath}" is outside the allowed file patterns: ${taskPermissions.filePatterns.join(", ")}`,
-					)
-				}
-			}
-
-			if (tool === "apply_patch" && typeof toolParams?.patch === "string") {
-				const patchFilePaths = extractFilePathsFromPatch(toolParams.patch)
-				for (const patchFilePath of patchFilePaths) {
-					if (!matchesAnyPattern(patchFilePath, taskPermissions.filePatterns)) {
-						throw new TaskPermissionError(
-							tool,
-							`File "${patchFilePath}" in patch is outside the allowed file patterns: ${taskPermissions.filePatterns.join(", ")}`,
-						)
-					}
-				}
-			}
 		}
 
-		// Check commandPatterns using layered enforcement
-		const commandPatternLayers = taskPermissions._commandPatternLayers
+		// Check commandPatterns -- same layered approach as filePatterns.
+		const commandPatternLayers =
+			taskPermissions._commandPatternLayers ??
+			(taskPermissions.commandPatterns?.length ? [taskPermissions.commandPatterns] : undefined)
+
 		if (commandPatternLayers && commandPatternLayers.length > 0 && resolvedTool === "execute_command") {
 			const command = toolParams?.command
 			if (command && typeof command === "string") {
 				if (!matchesAllPatternLayers(command, commandPatternLayers)) {
 					throw new TaskPermissionError(tool, `Command "${command}" is outside the allowed command patterns.`)
-				}
-			}
-		} else if (
-			taskPermissions.commandPatterns &&
-			taskPermissions.commandPatterns.length > 0 &&
-			resolvedTool === "execute_command"
-		) {
-			// Fallback for non-merged permissions (single layer)
-			const command = toolParams?.command
-			if (command && typeof command === "string") {
-				if (!matchesAnyPattern(command, taskPermissions.commandPatterns)) {
-					throw new TaskPermissionError(
-						tool,
-						`Command "${command}" is outside the allowed command patterns: ${taskPermissions.commandPatterns.join(", ")}`,
-					)
 				}
 			}
 		}

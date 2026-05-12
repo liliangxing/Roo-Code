@@ -38,6 +38,20 @@ describe("TaskPermissions", () => {
 			})
 			expect(result.success).toBe(false)
 		})
+
+		it("rejects invalid regex patterns in filePatterns", () => {
+			const result = taskPermissionsSchema.safeParse({
+				filePatterns: ["[invalid"],
+			})
+			expect(result.success).toBe(false)
+		})
+
+		it("rejects invalid regex patterns in commandPatterns", () => {
+			const result = taskPermissionsSchema.safeParse({
+				commandPatterns: ["(unclosed"],
+			})
+			expect(result.success).toBe(false)
+		})
 	})
 
 	describe("toTaskPermissions", () => {
@@ -190,6 +204,19 @@ describe("TaskPermissions", () => {
 
 		it("does not match restricted commands", () => {
 			expect(matchesAnyPattern("rm -rf /", ["npm.*", "yarn.*"])).toBe(false)
+		})
+
+		it("anchors patterns so substrings do not match", () => {
+			// "src/.*" should NOT match a path that merely contains "src/" as a substring
+			expect(matchesAnyPattern("evil/src/components/foo.ts", ["src/.*"])).toBe(false)
+			// But should still match paths that start with src/
+			expect(matchesAnyPattern("src/components/foo.ts", ["src/.*"])).toBe(true)
+		})
+
+		it("respects pre-anchored patterns (starting with ^)", () => {
+			// A pattern already starting with ^ should not be double-wrapped
+			expect(matchesAnyPattern("src/foo.ts", ["^src/.*$"])).toBe(true)
+			expect(matchesAnyPattern("evil/src/foo.ts", ["^src/.*$"])).toBe(false)
 		})
 	})
 

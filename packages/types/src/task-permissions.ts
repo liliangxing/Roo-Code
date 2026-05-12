@@ -9,20 +9,34 @@ import { z } from "zod"
  * more access than its parent.
  */
 
+/** Zod refinement that rejects strings which are not valid regular expressions. */
+const regexString = z.string().refine(
+	(val) => {
+		try {
+			new RegExp(val)
+			return true
+		} catch {
+			return false
+		}
+	},
+	{ message: "Invalid regular expression" },
+)
+
 export const taskPermissionsSchema = z.object({
 	/**
 	 * Regex patterns for allowed file paths.
 	 * When set, file operations (read/write) are restricted to paths matching
-	 * at least one of these patterns.
+	 * at least one of these patterns.  Patterns are automatically anchored
+	 * (wrapped in `^(?:...)$`) at runtime so they match the full path.
 	 */
-	filePatterns: z.array(z.string()).optional(),
+	filePatterns: z.array(regexString).optional(),
 
 	/**
 	 * Regex patterns for allowed shell commands.
 	 * When set, command execution is restricted to commands matching
-	 * at least one of these patterns.
+	 * at least one of these patterns.  Patterns are automatically anchored.
 	 */
-	commandPatterns: z.array(z.string()).optional(),
+	commandPatterns: z.array(regexString).optional(),
 
 	/**
 	 * Explicit tool allowlist. When set, only these tools may be used
@@ -174,7 +188,10 @@ function collectPatternLayers(
 export function matchesAnyPattern(value: string, patterns: string[]): boolean {
 	return patterns.some((pattern) => {
 		try {
-			return new RegExp(pattern).test(value)
+			// Anchor patterns so they must match the entire value, not a substring.
+			// This prevents "src/.*" from matching "evil/src/foo".
+			const anchored = pattern.startsWith("^") ? pattern : `^(?:${pattern})$`
+			return new RegExp(anchored).test(value)
 		} catch {
 			// Invalid regex -- treat as non-match
 			return false
