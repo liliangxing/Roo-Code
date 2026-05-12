@@ -38,13 +38,46 @@ export const taskPermissionsSchema = z.object({
 	deniedTools: z.array(z.string()).optional(),
 })
 
-export type TaskPermissions = z.infer<typeof taskPermissionsSchema>
+/** The shape accepted as input from the model via the new_task tool. */
+export type TaskPermissionsInput = z.infer<typeof taskPermissionsSchema>
+
+/**
+ * Internal representation of task permissions.  Extends the input shape with
+ * layered pattern fields that accumulate across nested delegation so that
+ * each ancestor's constraints are enforced independently (AND semantics
+ * between layers, OR semantics within a layer).
+ */
+export interface TaskPermissions extends TaskPermissionsInput {
+	/**
+	 * Accumulated file-pattern layers from ancestor tasks.
+	 * Each inner array is an OR-group; all layers must match (AND between layers).
+	 * Populated only by `mergeTaskPermissions` -- never set from model input.
+	 */
+	_filePatternLayers?: string[][]
+	/**
+	 * Accumulated command-pattern layers from ancestor tasks.
+	 * Same semantics as `_filePatternLayers`.
+	 */
+	_commandPatternLayers?: string[][]
+}
+
+/**
+ * Convert a validated input object (flat arrays) into the internal
+ * `TaskPermissions` representation, wrapping patterns into single layers.
+ */
+export function toTaskPermissions(input: TaskPermissionsInput): TaskPermissions {
+	return {
+		...input,
+		_filePatternLayers: input.filePatterns ? [input.filePatterns] : undefined,
+		_commandPatternLayers: input.commandPatterns ? [input.commandPatterns] : undefined,
+	}
+}
 
 /**
  * Merge two TaskPermissions using most-restrictive-wins semantics.
  *
- * - filePatterns / commandPatterns: if both define patterns, keep only patterns
- *   present in both (intersection). If only one side defines patterns, use that.
+ * - filePatterns / commandPatterns: accumulated as independent layers so that
+ *   a value must match at least one pattern from EACH ancestor's layer.
  * - allowedTools: intersection of both lists (if both defined).
  * - deniedTools: union of both lists (most restrictive).
  *
@@ -64,12 +97,75 @@ export function mergeTaskPermissions(
 		return parent
 	}
 
+	// Collect pattern layers from both sides.  Each side may already carry
+	// accumulated layers from earlier merges (_*PatternLayers) as well as
+	// its own top-level patterns (filePatterns / commandPatterns).
+	const filePatternLayers = collectPatternLayers(
+		parent._filePatternLayers,
+		parent.filePatterns,
+		child._filePatternLayers,
+		child.filePatterns,
+	)
+
+	const commandPatternLayers = collectPatternLayers(
+		parent._commandPatternLayers,
+		parent.commandPatterns,
+		child._commandPatternLayers,
+		child.commandPatterns,
+	)
+
 	return {
-		filePatterns: intersectOptionalArrays(parent.filePatterns, child.filePatterns),
-		commandPatterns: intersectOptionalArrays(parent.commandPatterns, child.commandPatterns),
+		// The top-level field stores the child's own patterns (used for display /
+		// serialization); runtime enforcement uses the layers.
+		filePatterns: child.filePatterns ?? parent.filePatterns,
+		commandPatterns: child.commandPatterns ?? parent.commandPatterns,
+		_filePatternLayers: filePatternLayers.length > 0 ? filePatternLayers : undefined,
+		_commandPatternLayers: commandPatternLayers.length > 0 ? commandPatternLayers : undefined,
 		allowedTools: intersectOptionalArrays(parent.allowedTools, child.allowedTools),
 		deniedTools: unionOptionalArrays(parent.deniedTools, child.deniedTools),
 	}
+}
+
+/**
+ * Collect pattern layers from parent and child, deduplicating identical layers.
+ */
+function collectPatternLayers(
+	parentLayers: string[][] | undefined,
+	parentPatterns: string[] | undefined,
+	childLayers: string[][] | undefined,
+	childPatterns: string[] | undefined,
+): string[][] {
+	const layers: string[][] = []
+	const seen = new Set<string>()
+
+	const addLayer = (layer: string[]) => {
+		if (layer.length === 0) return
+		const key = JSON.stringify(layer)
+		if (!seen.has(key)) {
+			seen.add(key)
+			layers.push(layer)
+		}
+	}
+
+	// Add accumulated parent layers
+	if (parentLayers) {
+		for (const layer of parentLayers) {
+			addLayer(layer)
+		}
+	} else if (parentPatterns && parentPatterns.length > 0) {
+		addLayer(parentPatterns)
+	}
+
+	// Add accumulated child layers
+	if (childLayers) {
+		for (const layer of childLayers) {
+			addLayer(layer)
+		}
+	} else if (childPatterns && childPatterns.length > 0) {
+		addLayer(childPatterns)
+	}
+
+	return layers
 }
 
 /**
@@ -84,6 +180,17 @@ export function matchesAnyPattern(value: string, patterns: string[]): boolean {
 			return false
 		}
 	})
+}
+
+/**
+ * Check if a value matches ALL pattern layers (AND between layers, OR within each layer).
+ * Returns true if there are no layers.
+ */
+export function matchesAllPatternLayers(value: string, layers: string[][] | undefined): boolean {
+	if (!layers || layers.length === 0) {
+		return true
+	}
+	return layers.every((layer) => matchesAnyPattern(value, layer))
 }
 
 /**

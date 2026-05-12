@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { isToolAllowedForMode, TaskPermissionError } from "../validateToolUse"
 import type { TaskPermissions } from "@roo-code/types"
+import { toTaskPermissions, mergeTaskPermissions } from "@roo-code/types"
 import type { ModeConfig } from "@roo-code/types"
 
 const codeMode: ModeConfig = {
@@ -37,6 +38,38 @@ describe("TaskPermissions enforcement in isToolAllowedForMode", () => {
 			expect(
 				isToolAllowedForMode(
 					"read_file",
+					"code",
+					[codeMode],
+					undefined,
+					undefined,
+					undefined,
+					undefined,
+					permissions,
+				),
+			).toBe(true)
+		})
+
+		it("never denies ALWAYS_AVAILABLE_TOOLS even when in deniedTools", () => {
+			const permissions: TaskPermissions = {
+				deniedTools: ["attempt_completion", "ask_followup_question"],
+			}
+			// attempt_completion should always be allowed
+			expect(
+				isToolAllowedForMode(
+					"attempt_completion",
+					"code",
+					[codeMode],
+					undefined,
+					undefined,
+					undefined,
+					undefined,
+					permissions,
+				),
+			).toBe(true)
+			// ask_followup_question should always be allowed
+			expect(
+				isToolAllowedForMode(
+					"ask_followup_question",
 					"code",
 					[codeMode],
 					undefined,
@@ -108,9 +141,9 @@ describe("TaskPermissions enforcement in isToolAllowedForMode", () => {
 
 	describe("filePatterns", () => {
 		it("throws TaskPermissionError when file path doesn't match any pattern", () => {
-			const permissions: TaskPermissions = {
+			const permissions = toTaskPermissions({
 				filePatterns: ["src/components/.*"],
-			}
+			})
 			expect(() =>
 				isToolAllowedForMode(
 					"write_to_file",
@@ -126,9 +159,9 @@ describe("TaskPermissions enforcement in isToolAllowedForMode", () => {
 		})
 
 		it("allows file paths matching a pattern", () => {
-			const permissions: TaskPermissions = {
+			const permissions = toTaskPermissions({
 				filePatterns: ["src/components/.*"],
-			}
+			})
 			expect(
 				isToolAllowedForMode(
 					"write_to_file",
@@ -144,9 +177,9 @@ describe("TaskPermissions enforcement in isToolAllowedForMode", () => {
 		})
 
 		it("does not restrict tools without file paths", () => {
-			const permissions: TaskPermissions = {
+			const permissions = toTaskPermissions({
 				filePatterns: ["src/components/.*"],
-			}
+			})
 			expect(
 				isToolAllowedForMode(
 					"search_files",
@@ -162,11 +195,61 @@ describe("TaskPermissions enforcement in isToolAllowedForMode", () => {
 		})
 	})
 
+	describe("filePatterns layered enforcement", () => {
+		it("enforces all pattern layers (AND between layers)", () => {
+			const parent = toTaskPermissions({ filePatterns: ["src/.*"] })
+			const child = toTaskPermissions({ filePatterns: ["src/components/.*"] })
+			const merged = mergeTaskPermissions(parent, child)!
+
+			// src/components/Button.tsx matches both layers
+			expect(
+				isToolAllowedForMode(
+					"write_to_file",
+					"code",
+					[codeMode],
+					undefined,
+					{ path: "src/components/Button.tsx" },
+					undefined,
+					undefined,
+					merged,
+				),
+			).toBe(true)
+
+			// src/utils/helper.ts matches parent layer but not child layer
+			expect(() =>
+				isToolAllowedForMode(
+					"write_to_file",
+					"code",
+					[codeMode],
+					undefined,
+					{ path: "src/utils/helper.ts" },
+					undefined,
+					undefined,
+					merged,
+				),
+			).toThrow(TaskPermissionError)
+
+			// tests/test.ts matches neither layer
+			expect(() =>
+				isToolAllowedForMode(
+					"write_to_file",
+					"code",
+					[codeMode],
+					undefined,
+					{ path: "tests/test.ts" },
+					undefined,
+					undefined,
+					merged,
+				),
+			).toThrow(TaskPermissionError)
+		})
+	})
+
 	describe("commandPatterns", () => {
 		it("throws TaskPermissionError when command doesn't match any pattern", () => {
-			const permissions: TaskPermissions = {
+			const permissions = toTaskPermissions({
 				commandPatterns: ["npm test.*", "npm run lint"],
-			}
+			})
 			expect(() =>
 				isToolAllowedForMode(
 					"execute_command",
@@ -182,9 +265,9 @@ describe("TaskPermissions enforcement in isToolAllowedForMode", () => {
 		})
 
 		it("allows commands matching a pattern", () => {
-			const permissions: TaskPermissions = {
+			const permissions = toTaskPermissions({
 				commandPatterns: ["npm test.*", "npm run lint"],
-			}
+			})
 			expect(
 				isToolAllowedForMode(
 					"execute_command",

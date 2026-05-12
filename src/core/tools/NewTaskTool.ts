@@ -1,7 +1,10 @@
 import * as vscode from "vscode"
 
 import { TodoItem } from "@roo-code/types"
+<<<<<<< HEAD
 import type { SubtaskQueueItem } from "@roo-code/types"
+=======
+>>>>>>> 6c51a5d52 (fix: three bugs in task permissions - parser, deniedTools exemption, pattern merging)
 import { type TaskPermissions, taskPermissionsSchema, toTaskPermissions } from "@roo-code/types"
 
 import { Task } from "../task/Task"
@@ -103,7 +106,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 						)
 						return
 					}
-					parsedPermissions = result.data
+					parsedPermissions = toTaskPermissions(result.data)
 				} catch (error) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("new_task")
