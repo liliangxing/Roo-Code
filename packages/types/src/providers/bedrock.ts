@@ -173,6 +173,7 @@ export const bedrockModels = {
 		supportsImages: true,
 		supportsPromptCache: true,
 		supportsReasoningBudget: true,
+		supportsTemperature: false,
 		inputPrice: 5.0, // $5 per million input tokens (≤200K context)
 		outputPrice: 25.0, // $25 per million output tokens (≤200K context)
 		cacheWritesPrice: 6.25, // $6.25 per million tokens
