@@ -8,6 +8,16 @@
  * - Are not added to the clineStack
  *
  * This is Phase 4 of the parallel execution roadmap: Background Read-Only Concurrency.
+ *
+ * Phase 6+ extension points:
+ * - To support write-capable background tasks, extend BACKGROUND_TASK_ALLOWED_TOOLS
+ *   and add a file-locking mechanism to prevent conflicts with foreground edits.
+ * - For real-time progress streaming, add an `onProgressUpdate` callback to
+ *   BackgroundTaskInfo and emit partial tool-call summaries from Task.
+ * - For persistent history across sessions, serialize completedTasks to global
+ *   state via the TaskHistoryStore and restore on provider initialization.
+ * - For tab-based switching, expose the background task's clineMessages via
+ *   getTasksStatus() so the webview can render a full conversation view.
  */
 
 import { BackgroundTaskStatusInfo } from "@roo-code/types"

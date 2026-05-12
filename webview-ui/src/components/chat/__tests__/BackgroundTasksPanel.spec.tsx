@@ -80,7 +80,7 @@ describe("BackgroundTasksPanel", () => {
 		expect(cancelButton).toBeDefined()
 	})
 
-	it("should send cancelBackgroundTask message when cancel is clicked", () => {
+	it("should require two clicks to cancel (confirmation pattern)", () => {
 		mockBackgroundTasks.push({
 			taskId: "task-cancel-me",
 			parentTaskId: "parent-1",
@@ -90,8 +90,15 @@ describe("BackgroundTasksPanel", () => {
 
 		render(<BackgroundTasksPanel />)
 		const cancelButton = screen.getByTitle("Cancel background task")
-		fireEvent.click(cancelButton)
 
+		// First click shows confirmation text, does NOT send message
+		fireEvent.click(cancelButton)
+		expect(vscode.postMessage).not.toHaveBeenCalled()
+		expect(screen.getByText("Cancel?")).toBeDefined()
+
+		// Second click confirms and sends the cancel message
+		const confirmButton = screen.getByTitle("Click again to confirm cancellation")
+		fireEvent.click(confirmButton)
 		expect(vscode.postMessage).toHaveBeenCalledWith({
 			type: "cancelBackgroundTask",
 			taskId: "task-cancel-me",
