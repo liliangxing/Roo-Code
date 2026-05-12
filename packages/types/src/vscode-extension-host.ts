@@ -92,6 +92,7 @@ export interface ExtensionMessage {
 		| "folderSelected"
 		| "skills"
 		| "fileContent"
+		| "backgroundTaskMessages"
 	text?: string
 	/** For fileContent: { path, content, error? } */
 	fileContent?: { path: string; content: string | null; error?: string }
@@ -160,6 +161,8 @@ export interface ExtensionMessage {
 	tools?: SerializedCustomToolDefinition[] // For customToolsResult
 	skills?: SkillMetadata[] // For skills response
 	modes?: { slug: string; name: string }[] // For modes response
+	backgroundTaskMessages?: ClineMessage[] // For backgroundTaskMessages: loaded messages for a background task replay
+	backgroundTaskId?: string // For backgroundTaskMessages: the task ID these messages belong to
 	aggregatedCosts?: {
 		// For taskWithAggregatedCosts response
 		totalCost: number
@@ -514,6 +517,8 @@ export interface WebviewMessage {
 		| "createWorktreeInclude"
 		| "checkoutBranch"
 		| "browseForWorktreePath"
+		// Background task replay messages
+		| "requestBackgroundTaskMessages"
 		// Skills messages
 		| "requestSkills"
 		| "createSkill"
@@ -524,7 +529,7 @@ export interface WebviewMessage {
 	text?: string
 	taskId?: string
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat"
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "bgTaskReplay"
 	disabled?: boolean
 	context?: string
 	dataUri?: string
