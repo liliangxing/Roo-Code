@@ -869,6 +869,39 @@ export const ChatRowContent = ({
 						</div>
 						<div className="border-l border-muted-foreground/80 ml-2 pl-4 pb-1">
 							<MarkdownBlock markdown={tool.content} />
+							{tool.permissions && (
+								<div className="mt-2 p-2 rounded text-xs text-vscode-descriptionForeground bg-vscode-editor-background border border-vscode-editorGroup-border">
+									<div className="font-semibold mb-1">{t("chat:subtasks.permissionBoundaries")}</div>
+									{tool.permissions.filePatterns && (
+										<div>
+											{t("chat:subtasks.permissionFilePatterns", {
+												patterns: tool.permissions.filePatterns.join(", "),
+											})}
+										</div>
+									)}
+									{tool.permissions.commandPatterns && (
+										<div>
+											{t("chat:subtasks.permissionCommandPatterns", {
+												patterns: tool.permissions.commandPatterns.join(", "),
+											})}
+										</div>
+									)}
+									{tool.permissions.allowedTools && (
+										<div>
+											{t("chat:subtasks.permissionAllowedTools", {
+												tools: tool.permissions.allowedTools.join(", "),
+											})}
+										</div>
+									)}
+									{tool.permissions.deniedTools && (
+										<div>
+											{t("chat:subtasks.permissionDeniedTools", {
+												tools: tool.permissions.deniedTools.join(", "),
+											})}
+										</div>
+									)}
+								</div>
+							)}
 							<div>
 								{childTaskId && !isFollowedBySubtaskResult && (
 									<button
