@@ -199,7 +199,21 @@ interface BackgroundTaskViewState {
 5. If task is completed → opens BackgroundTaskReplayView
 6. If task is active → opens BackgroundTaskLiveView (Phase 6c)
 
-### 6c. Real-time Progress Streaming
+### 6c. Real-time Progress Streaming (Minimal Viable Version)
+
+> **Design principle:** Keep Phase 6c tightly scoped to avoid expanding the phase. Ship the simplest useful version first; richer detail can be added incrementally in later phases.
+
+#### MVP Scope
+
+The minimal viable version streams only:
+- **Tool name + status** (started / completed / errored) -- not full parameters or output
+- **Last N updates** (rolling window of ~20 items) -- older entries are discarded client-side
+- **Status changes** (running, paused, completed, errored)
+
+What is explicitly **out of scope** for the MVP:
+- Full tool call parameters or output payloads
+- Assistant text streaming
+- Persistent storage of streamed updates (replay from disk covers completed tasks)
 
 #### New Message Types
 
@@ -212,11 +226,15 @@ interface BackgroundTaskProgress {
 }
 
 interface BackgroundTaskUpdate {
-  kind: "tool_call" | "tool_result" | "assistant_text" | "status_change" | "error"
+  kind: "tool_call" | "tool_result" | "status_change" | "error"
   timestamp: number
-  data: any  // Typed per kind
+  toolName?: string       // e.g. "read_file", "execute_command"
+  status?: string         // e.g. "started", "completed", "errored"
+  errorMessage?: string   // Only for kind === "error"
 }
 ```
+
+Note: `assistant_text` is excluded from the MVP. The update interface uses typed optional fields instead of `data: any` to keep the contract narrow and safe.
 
 #### Task.ts Changes
 
@@ -239,24 +257,28 @@ private emitBackgroundProgress(update: BackgroundTaskUpdate) {
 }
 ```
 
+The hook points in Task.ts should be minimal -- emit at tool call start and tool call end only. Avoid adding hooks inside the LLM streaming loop for the MVP.
+
 #### Throttling Strategy
 
-- Batch updates in 200ms windows
-- Cap at 10 updates per batch per task
-- Drop older updates if buffer exceeds threshold
-- Priority: status_change > error > tool_result > tool_call > assistant_text
+- Batch updates in 500ms windows (conservative default; can be tuned down later)
+- Cap at 5 updates per batch per task
+- Drop older updates if buffer exceeds threshold (keep last N = 20)
+- Priority ordering: status_change > error > tool_result > tool_call
 
 #### Webview: BackgroundTaskLiveView
 
 ```
 BackgroundTaskLiveView
 ├── Props: { taskId: string }
-├── State: updates (BackgroundTaskUpdate[]), status
+├── State: updates (BackgroundTaskUpdate[], capped at last 20), status
 ├── Subscribes to backgroundTaskProgress messages filtered by taskId
-├── Renders: streaming list of tool calls and results
+├── Renders: compact list of recent tool calls with status icons
 ├── Auto-scrolls to latest update
 └── Shows task status badge (running, paused, completed, errored)
 ```
+
+The live view intentionally shows a compact summary, not a full chat transcript. Users who want full detail can wait for the task to complete and use the replay view (6a).
 
 ## 7. Testing Strategy
 
@@ -270,8 +292,69 @@ BackgroundTaskLiveView
 
 ## 8. Open Questions
 
-1. **Should the background task list be a sidebar panel or a tab?** A sidebar panel (like the existing Phase 5 panel) keeps the foreground task visible. A tab replaces the view entirely but is simpler.
+The following questions need alignment before implementation begins. They are grouped by area and ordered by impact.
 
-2. **Message size limits for replay:** Completed tasks can have thousands of messages. Should we paginate or lazy-load? Initial recommendation: load all at once (same as current ChatView behavior), optimize if performance becomes an issue.
+### UI Layout
 
-3. **Progress streaming granularity:** Should we stream every tool call parameter, or just tool names + status? Start with names + status, add detail incrementally.
+1. **Should the background task list be a sidebar panel or a tab?**
+
+   | Option | Pros | Cons |
+   |--------|------|------|
+   | **Sidebar panel** (like Phase 5 panel) | Foreground task stays visible; quick glance at background status without context-switching | More complex layout; may feel cramped in narrow viewports |
+   | **Full tab** (`tab === "bgTask"`) | Simpler implementation; full width for task details | Replaces the current view entirely; user loses sight of foreground task |
+   | **Hybrid** (collapsible sidebar that can expand to full view) | Best of both worlds | Highest implementation effort |
+
+   **Recommendation:** Start with a full tab for simplicity. If user feedback indicates they need to monitor background tasks while interacting with the foreground task, add a sidebar mode in a follow-up.
+
+   **Decision needed:** Which option should we ship first?
+
+2. **Where does the "background tasks" entry point live?**
+
+   Options:
+   - A new icon in the existing tab bar (alongside chat, history, settings)
+   - A badge/button on the status area of the chat view
+   - An entry in the history view with a filter for background tasks
+
+   **Decision needed:** Which placement feels most discoverable without adding clutter?
+
+3. **Should the replay view share the ChatView component or be a separate component?**
+
+   Reusing `ChatView` with a read-only prop reduces duplication but may introduce coupling. A dedicated `BackgroundTaskReplayView` is more isolated but duplicates rendering logic.
+
+   **Recommendation:** Create a thin wrapper around `ChatRow` components rather than reusing the full `ChatView`. This avoids inheriting input controls, scroll management, and approval button logic that don't apply.
+
+### Progress Streaming Granularity
+
+4. **What level of detail should the MVP stream?**
+
+   | Level | What's shown | Bandwidth / perf cost |
+   |-------|-------------|----------------------|
+   | **Minimal** (recommended for MVP) | Tool name + status (started/completed/errored) | Very low |
+   | **Medium** | Tool name + truncated first argument (e.g., file path) | Low |
+   | **Full** | Complete tool parameters + output | High -- requires careful truncation |
+
+   **Recommendation:** Ship with minimal level. The tool name and status provide enough signal to know "what the background task is doing right now" without performance risk. Medium level can be added as a fast follow if users want more context.
+
+   **Decision needed:** Is the minimal level sufficient, or should we target medium from the start?
+
+5. **Should streaming updates be opt-in?**
+
+   If multiple background tasks are running, streaming all of them simultaneously could be noisy. Options:
+   - Stream all tasks by default, throttle aggressively
+   - Only stream updates for the currently-viewed background task
+   - Let users toggle streaming per task
+
+   **Recommendation:** Only stream updates for the currently-viewed background task (the one selected in the background task list). This keeps the implementation simple and avoids unnecessary message traffic.
+
+   **Decision needed:** Confirm this approach or choose an alternative.
+
+6. **How should errors in background tasks be surfaced?**
+
+   When a background task hits an error, the user may not notice if they're focused on the foreground task. Options:
+   - Badge/notification on the background tasks tab icon
+   - Toast notification
+   - Both
+
+   **Recommendation:** Badge on the tab icon (low disruption). Toast notifications can be added later if users miss errors.
+
+   **Decision needed:** Is a badge sufficient, or do we need more prominent notification?
