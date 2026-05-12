@@ -129,6 +129,19 @@ describe("BackgroundTaskRunner", () => {
 		it("should handle canceling unknown task gracefully", async () => {
 			await runner.cancelTask("unknown") // should not throw
 		})
+
+		it("should invoke onTaskError callback when abort throws", async () => {
+			const onTaskError = vi.fn()
+			const customRunner = new BackgroundTaskRunner(3, undefined, { onTaskError })
+			const task = createMockTask("task-1")
+			task.abortTask.mockRejectedValue(new Error("abort failed"))
+			customRunner.registerTask(task, "parent-1")
+
+			await customRunner.cancelTask("task-1")
+
+			expect(onTaskError).toHaveBeenCalledWith("task-1", "parent-1", expect.any(Error))
+			expect(customRunner.activeCount).toBe(0)
+		})
 	})
 
 	describe("cancelTasksByParent", () => {
@@ -163,6 +176,18 @@ describe("BackgroundTaskRunner", () => {
 
 			expect(task.abortTask).toHaveBeenCalledWith(true)
 			expect(customRunner.activeCount).toBe(0)
+		})
+
+		it("should invoke onTaskTimeout callback when task times out", async () => {
+			const onTaskTimeout = vi.fn()
+			const customRunner = new BackgroundTaskRunner(3, 5000, { onTaskTimeout })
+			const task = createMockTask("task-1")
+			customRunner.registerTask(task, "parent-1")
+
+			vi.advanceTimersByTime(5000)
+			await vi.runAllTimersAsync()
+
+			expect(onTaskTimeout).toHaveBeenCalledWith("task-1", "parent-1")
 		})
 	})
 
