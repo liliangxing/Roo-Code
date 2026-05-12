@@ -259,7 +259,12 @@
 		"resultContent": "Resultats de la subtasca",
 		"defaultResult": "Si us plau, continua amb la següent tasca.",
 		"completionInstructions": "Subtasca completada! Pots revisar els resultats i suggerir correccions o següents passos. Si tot sembla correcte, confirma per tornar el resultat a la tasca principal.",
-		"goToSubtask": "Veure tasca"
+		"goToSubtask": "Veure tasca",
+		"permissionBoundaries": "Límits de permisos",
+		"permissionFilePatterns": "Fitxers permesos: {{patterns}}",
+		"permissionCommandPatterns": "Comandes permeses: {{patterns}}",
+		"permissionAllowedTools": "Eines permeses: {{tools}}",
+		"permissionDeniedTools": "Eines denegades: {{tools}}"
 	},
 	"questions": {
 		"hasQuestion": "Roo té una pregunta"
@@ -484,5 +489,13 @@
 		"title": "Proveïdor ja no compatible",
 		"message": "Ho sentim, aquest proveïdor ja no és compatible. Hem vist molt pocs usuaris de Roo que realment l'utilitzaven i necessitem reduir l'abast del nostre codi per poder seguir avançant ràpidament i servir bé la nostra comunitat en aquest espai. Va ser una decisió molt difícil, però ens permet centrar-nos en el que més t'importa. Ho sabem, és una llàstima.",
 		"openSettings": "Obrir configuració"
+	},
+	"contextHandoff": {
+		"title": "Resum del traspàs de context",
+		"mode": "Mode",
+		"filesModified": "Fitxers modificats",
+		"filesRead": "Fitxers llegits",
+		"commandsExecuted": "Comandes executades",
+		"apiRequests": "Sol·licituds d'API"
 	}
 }

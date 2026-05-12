@@ -260,7 +260,12 @@
 		"resultContent": "Kết quả nhiệm vụ phụ",
 		"defaultResult": "Vui lòng tiếp tục với nhiệm vụ tiếp theo.",
 		"completionInstructions": "Nhiệm vụ phụ đã hoàn thành! Bạn có thể xem lại kết quả và đề xuất các sửa đổi hoặc bước tiếp theo. Nếu mọi thứ có vẻ tốt, hãy xác nhận để trả kết quả về nhiệm vụ chính.",
-		"goToSubtask": "Xem nhiệm vụ"
+		"goToSubtask": "Xem nhiệm vụ",
+		"permissionBoundaries": "Giới hạn quyền",
+		"permissionFilePatterns": "Tệp được phép: {{patterns}}",
+		"permissionCommandPatterns": "Lệnh được phép: {{patterns}}",
+		"permissionAllowedTools": "Công cụ được phép: {{tools}}",
+		"permissionDeniedTools": "Công cụ bị từ chối: {{tools}}"
 	},
 	"questions": {
 		"hasQuestion": "Roo có một câu hỏi"
@@ -485,5 +490,13 @@
 		"title": "Nhà cung cấp không còn được hỗ trợ",
 		"message": "Xin lỗi, nhà cung cấp này không còn được hỗ trợ. Chúng tôi nhận thấy rất ít người dùng Roo thực sự sử dụng nó và chúng tôi cần thu hẹp phạm vi mã nguồn để tiếp tục phát triển nhanh và phục vụ tốt cộng đồng. Đây là một quyết định thực sự khó khăn nhưng nó cho phép chúng tôi tập trung vào điều quan trọng nhất với bạn. Chúng tôi biết điều này thật phiền, xin thông cảm.",
 		"openSettings": "Mở cài đặt"
+	},
+	"contextHandoff": {
+		"title": "Tóm tắt chuyển giao ngữ cảnh",
+		"mode": "Chế độ",
+		"filesModified": "Tệp đã sửa đổi",
+		"filesRead": "Tệp đã đọc",
+		"commandsExecuted": "Lệnh đã thực thi",
+		"apiRequests": "Yêu cầu API"
 	}
 }

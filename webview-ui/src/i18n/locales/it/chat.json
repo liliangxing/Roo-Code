@@ -259,7 +259,12 @@
 		"resultContent": "Risultati sottoattività",
 		"defaultResult": "Per favore continua con la prossima attività.",
 		"completionInstructions": "Sottoattività completata! Puoi rivedere i risultati e suggerire correzioni o prossimi passi. Se tutto sembra a posto, conferma per restituire il risultato all'attività principale.",
-		"goToSubtask": "Visualizza attività"
+		"goToSubtask": "Visualizza attività",
+		"permissionBoundaries": "Limiti dei permessi",
+		"permissionFilePatterns": "File consentiti: {{patterns}}",
+		"permissionCommandPatterns": "Comandi consentiti: {{patterns}}",
+		"permissionAllowedTools": "Strumenti consentiti: {{tools}}",
+		"permissionDeniedTools": "Strumenti negati: {{tools}}"
 	},
 	"questions": {
 		"hasQuestion": "Roo ha una domanda"
@@ -484,5 +489,13 @@
 		"title": "Provider non più supportato",
 		"message": "Ci dispiace, questo provider non è più supportato. Abbiamo visto che pochissimi utenti di Roo lo utilizzavano effettivamente e dobbiamo ridurre la portata del nostro codice per continuare a procedere velocemente e servire bene la nostra community. È stata una decisione davvero difficile, ma ci permette di concentrarci su ciò che conta di più per te. Lo sappiamo, è una seccatura.",
 		"openSettings": "Apri impostazioni"
+	},
+	"contextHandoff": {
+		"title": "Riepilogo del passaggio di contesto",
+		"mode": "Modalità",
+		"filesModified": "File modificati",
+		"filesRead": "File letti",
+		"commandsExecuted": "Comandi eseguiti",
+		"apiRequests": "Richieste API"
 	}
 }
