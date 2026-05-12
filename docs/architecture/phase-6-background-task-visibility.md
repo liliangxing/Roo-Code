@@ -53,8 +53,8 @@ Parent-child relationships exist via `parentTaskId` and `childIds` on `HistoryIt
 3. Real-time progress streaming for active background tasks
 
 **Deferred to Phase 7 (Items 4-5):**
-4. Write-capable background tasks + basic file locking
-5. Persistent background task history across sessions
+4. Write-capable background tasks + basic file locking -- see [`phase-7-controlled-write-parallelism.md`](phase-7-controlled-write-parallelism.md) (Phases 7a, 7b)
+5. Persistent background task history across sessions -- see [`phase-7-controlled-write-parallelism.md`](phase-7-controlled-write-parallelism.md) (Phase 7c)
 
 ## 4. Feasibility Analysis
 
