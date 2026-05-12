@@ -105,6 +105,7 @@ export interface ExtensionMessage {
 		| "chatButtonClicked"
 		| "settingsButtonClicked"
 		| "historyButtonClicked"
+		| "backgroundTasksButtonClicked"
 		| "didBecomeVisible"
 		| "focusInput"
 		| "switchTab"
@@ -529,7 +530,7 @@ export interface WebviewMessage {
 	text?: string
 	taskId?: string
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "bgTaskReplay"
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "bgTaskReplay" | "bgTask"
 	disabled?: boolean
 	context?: string
 	dataUri?: string

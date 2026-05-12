@@ -13,6 +13,7 @@ import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/welcome/WelcomeViewProvider"
 import BackgroundTaskReplayView from "./components/chat/BackgroundTaskReplayView"
+import BackgroundTaskView from "./components/chat/BackgroundTaskView"
 import { CheckpointRestoreDialog } from "./components/chat/CheckpointRestoreDialog"
 import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
 import ErrorBoundary from "./components/ErrorBoundary"
@@ -20,7 +21,7 @@ import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonI
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 
-type Tab = "settings" | "history" | "chat" | "bgTaskReplay"
+type Tab = "settings" | "history" | "chat" | "bgTaskReplay" | "bgTask"
 
 interface DeleteMessageDialogState {
 	isOpen: boolean
@@ -44,6 +45,7 @@ const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]
 	chatButtonClicked: "chat",
 	settingsButtonClicked: "settings",
 	historyButtonClicked: "history",
+	backgroundTasksButtonClicked: "bgTask",
 }
 
 const App = () => {
@@ -189,6 +191,7 @@ const App = () => {
 					}}
 				/>
 			)}
+			{tab === "bgTask" && <BackgroundTaskView onClose={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
 			{tab === "settings" && (
 				<SettingsView ref={settingsRef} onDone={() => setTab("chat")} targetSection={currentSection} />
