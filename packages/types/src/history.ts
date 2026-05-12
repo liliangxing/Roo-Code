@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { taskPermissionsSchema } from "./task-permissions.js"
+
 /**
  * SubtaskQueueItem — a single queued subtask definition for sequential fan-out.
  * Used by the orchestrator to define a pipeline of subtasks that execute one after another.
@@ -52,6 +54,7 @@ export const historyItemSchema = z.object({
 	subtaskQueue: z.array(subtaskQueueItemSchema).optional(), // Remaining subtasks to execute
 	subtaskQueueIndex: z.number().optional(), // Current position in the original queue (0-based)
 	subtaskResults: z.array(subtaskResultSchema).optional(), // Results from completed queue subtasks
+	taskPermissions: taskPermissionsSchema.optional(), // Permission boundaries set by parent task
 })
 
 export type HistoryItem = z.infer<typeof historyItemSchema>

@@ -5,6 +5,7 @@ import {
 	matchesAllPatternLayers,
 	taskPermissionsSchema,
 	toTaskPermissions,
+	isSafeRegex,
 } from "../task-permissions.js"
 import type { TaskPermissions } from "../task-permissions.js"
 
@@ -244,6 +245,81 @@ describe("TaskPermissions", () => {
 			const layers = [["src/.*", "tests/.*"]]
 			expect(matchesAllPatternLayers("tests/unit/test.ts", layers)).toBe(true)
 			expect(matchesAllPatternLayers("docs/readme.md", layers)).toBe(false)
+		})
+	})
+
+	describe("isSafeRegex", () => {
+		it("accepts simple file path patterns", () => {
+			expect(isSafeRegex("src/.*")).toBe(true)
+			expect(isSafeRegex("src/components/.*\\.tsx")).toBe(true)
+			expect(isSafeRegex("npm test.*")).toBe(true)
+		})
+
+		it("rejects nested quantifiers (classic ReDoS)", () => {
+			expect(isSafeRegex("(a+)+")).toBe(false)
+			expect(isSafeRegex("(a*)+")).toBe(false)
+			expect(isSafeRegex("(a+)*")).toBe(false)
+			expect(isSafeRegex("(a+){2,}")).toBe(false)
+		})
+
+		it("rejects overlapping alternations in repeated groups", () => {
+			expect(isSafeRegex("(a|a)+")).toBe(false)
+			expect(isSafeRegex("(.|a)*")).toBe(false)
+		})
+
+		it("rejects patterns exceeding maximum length", () => {
+			const longPattern = "a".repeat(201)
+			expect(isSafeRegex(longPattern)).toBe(false)
+		})
+
+		it("accepts patterns at maximum length", () => {
+			const maxPattern = "a".repeat(200)
+			expect(isSafeRegex(maxPattern)).toBe(true)
+		})
+	})
+
+	describe("schema ReDoS rejection", () => {
+		it("rejects ReDoS-vulnerable patterns in filePatterns", () => {
+			const result = taskPermissionsSchema.safeParse({
+				filePatterns: ["(a+)+"],
+			})
+			expect(result.success).toBe(false)
+		})
+
+		it("rejects ReDoS-vulnerable patterns in commandPatterns", () => {
+			const result = taskPermissionsSchema.safeParse({
+				commandPatterns: ["(cmd|cmd)*"],
+			})
+			expect(result.success).toBe(false)
+		})
+
+		it("rejects overly long patterns at schema level", () => {
+			const result = taskPermissionsSchema.safeParse({
+				filePatterns: ["a".repeat(201)],
+			})
+			expect(result.success).toBe(false)
+		})
+	})
+
+	describe("persistence round-trip", () => {
+		it("taskPermissionsSchema can parse persisted permissions (without internal fields)", () => {
+			// Simulate what gets persisted: only the input-level fields
+			const persisted = {
+				filePatterns: ["src/.*"],
+				commandPatterns: ["npm test.*"],
+				allowedTools: ["read_file"],
+				deniedTools: ["execute_command"],
+			}
+			const result = taskPermissionsSchema.safeParse(persisted)
+			expect(result.success).toBe(true)
+			if (result.success) {
+				// Can be converted back to internal representation
+				const restored = toTaskPermissions(result.data)
+				expect(restored._filePatternLayers).toEqual([["src/.*"]])
+				expect(restored._commandPatternLayers).toEqual([["npm test.*"]])
+				expect(restored.allowedTools).toEqual(["read_file"])
+				expect(restored.deniedTools).toEqual(["execute_command"])
+			}
 		})
 	})
 })
