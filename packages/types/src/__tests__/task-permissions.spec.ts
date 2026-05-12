@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { mergeTaskPermissions, matchesAnyPattern, taskPermissionsSchema } from "../task-permissions.js"
+import {
+	mergeTaskPermissions,
+	matchesAnyPattern,
+	matchesAllPatternLayers,
+	taskPermissionsSchema,
+	toTaskPermissions,
+} from "../task-permissions.js"
 import type { TaskPermissions } from "../task-permissions.js"
 
 describe("TaskPermissions", () => {
@@ -34,6 +40,28 @@ describe("TaskPermissions", () => {
 		})
 	})
 
+	describe("toTaskPermissions", () => {
+		it("wraps flat filePatterns into a single layer", () => {
+			const input = { filePatterns: ["src/.*"] }
+			const result = toTaskPermissions(input)
+			expect(result._filePatternLayers).toEqual([["src/.*"]])
+			expect(result.filePatterns).toEqual(["src/.*"])
+		})
+
+		it("wraps flat commandPatterns into a single layer", () => {
+			const input = { commandPatterns: ["npm test.*"] }
+			const result = toTaskPermissions(input)
+			expect(result._commandPatternLayers).toEqual([["npm test.*"]])
+		})
+
+		it("leaves layers undefined when patterns are not set", () => {
+			const input = { allowedTools: ["read_file"] }
+			const result = toTaskPermissions(input)
+			expect(result._filePatternLayers).toBeUndefined()
+			expect(result._commandPatternLayers).toBeUndefined()
+		})
+	})
+
 	describe("mergeTaskPermissions", () => {
 		it("returns undefined when both are undefined", () => {
 			expect(mergeTaskPermissions(undefined, undefined)).toBeUndefined()
@@ -49,18 +77,25 @@ describe("TaskPermissions", () => {
 			expect(mergeTaskPermissions(parent, undefined)).toEqual(parent)
 		})
 
-		it("intersects filePatterns when both defined", () => {
-			const parent: TaskPermissions = { filePatterns: ["src/.*", "tests/.*"] }
-			const child: TaskPermissions = { filePatterns: ["src/.*", "docs/.*"] }
+		it("accumulates filePatterns as separate layers when both defined", () => {
+			const parent = toTaskPermissions({ filePatterns: ["src/.*", "tests/.*"] })
+			const child = toTaskPermissions({ filePatterns: ["src/.*", "docs/.*"] })
 			const merged = mergeTaskPermissions(parent, child)
-			expect(merged?.filePatterns).toEqual(["src/.*"])
+			// Both layers are kept (AND semantics between layers)
+			expect(merged?._filePatternLayers).toEqual([
+				["src/.*", "tests/.*"],
+				["src/.*", "docs/.*"],
+			])
 		})
 
-		it("intersects commandPatterns when both defined", () => {
-			const parent: TaskPermissions = { commandPatterns: ["npm test.*", "npm run lint"] }
-			const child: TaskPermissions = { commandPatterns: ["npm test.*", "npm run build"] }
+		it("accumulates commandPatterns as separate layers when both defined", () => {
+			const parent = toTaskPermissions({ commandPatterns: ["npm test.*", "npm run lint"] })
+			const child = toTaskPermissions({ commandPatterns: ["npm test.*", "npm run build"] })
 			const merged = mergeTaskPermissions(parent, child)
-			expect(merged?.commandPatterns).toEqual(["npm test.*"])
+			expect(merged?._commandPatternLayers).toEqual([
+				["npm test.*", "npm run lint"],
+				["npm test.*", "npm run build"],
+			])
 		})
 
 		it("intersects allowedTools when both defined", () => {
@@ -85,42 +120,50 @@ describe("TaskPermissions", () => {
 		})
 
 		it("uses parent filePatterns when child has none", () => {
-			const parent: TaskPermissions = { filePatterns: ["src/.*"] }
+			const parent = toTaskPermissions({ filePatterns: ["src/.*"] })
 			const child: TaskPermissions = { deniedTools: ["execute_command"] }
 			const merged = mergeTaskPermissions(parent, child)
-			expect(merged?.filePatterns).toEqual(["src/.*"])
+			expect(merged?._filePatternLayers).toEqual([["src/.*"]])
 			expect(merged?.deniedTools).toEqual(["execute_command"])
 		})
 
-		it("returns empty array when intersection is empty", () => {
+		it("returns empty array when allowedTools intersection is empty", () => {
 			const parent: TaskPermissions = { allowedTools: ["read_file"] }
 			const child: TaskPermissions = { allowedTools: ["write_to_file"] }
 			const merged = mergeTaskPermissions(parent, child)
 			expect(merged?.allowedTools).toEqual([])
 		})
 
-		it("handles complex nested merge scenario with exact string matching", () => {
-			const grandparent: TaskPermissions = {
+		it("handles nested delegation where child narrows scope", () => {
+			const grandparent = toTaskPermissions({
 				filePatterns: ["src/.*"],
 				commandPatterns: ["npm.*"],
 				allowedTools: ["read_file", "write_to_file", "search_files"],
 				deniedTools: ["execute_command"],
-			}
-			const parent: TaskPermissions = {
+			})
+			const parent = toTaskPermissions({
 				filePatterns: ["src/components/.*"],
 				allowedTools: ["read_file", "write_to_file"],
-			}
+			})
 
-			// Intersection uses exact string matching, so "src/components/.*" (child)
-			// is not equal to "src/.*" (parent) -- intersection is empty
-			const merged1 = mergeTaskPermissions(grandparent, parent)
-			expect(merged1?.filePatterns).toEqual([])
+			const merged = mergeTaskPermissions(grandparent, parent)
+
+			// Both layers are kept -- runtime enforces AND between them
+			expect(merged?._filePatternLayers).toEqual([["src/.*"], ["src/components/.*"]])
 			// allowedTools intersection: read_file and write_to_file are in both
-			expect(merged1?.allowedTools).toEqual(["read_file", "write_to_file"])
+			expect(merged?.allowedTools).toEqual(["read_file", "write_to_file"])
 			// commandPatterns: only grandparent has them, so they pass through
-			expect(merged1?.commandPatterns).toEqual(["npm.*"])
+			expect(merged?._commandPatternLayers).toEqual([["npm.*"]])
 			// deniedTools: only grandparent has them, so they pass through
-			expect(merged1?.deniedTools).toEqual(["execute_command"])
+			expect(merged?.deniedTools).toEqual(["execute_command"])
+		})
+
+		it("deduplicates identical pattern layers", () => {
+			const parent = toTaskPermissions({ filePatterns: ["src/.*"] })
+			const child = toTaskPermissions({ filePatterns: ["src/.*"] })
+			const merged = mergeTaskPermissions(parent, child)
+			// Identical layers are deduplicated
+			expect(merged?._filePatternLayers).toEqual([["src/.*"]])
 		})
 	})
 
@@ -147,6 +190,33 @@ describe("TaskPermissions", () => {
 
 		it("does not match restricted commands", () => {
 			expect(matchesAnyPattern("rm -rf /", ["npm.*", "yarn.*"])).toBe(false)
+		})
+	})
+
+	describe("matchesAllPatternLayers", () => {
+		it("returns true when layers is undefined", () => {
+			expect(matchesAllPatternLayers("anything", undefined)).toBe(true)
+		})
+
+		it("returns true when layers is empty", () => {
+			expect(matchesAllPatternLayers("anything", [])).toBe(true)
+		})
+
+		it("returns true when value matches all layers", () => {
+			const layers = [["src/.*"], ["src/components/.*"]]
+			expect(matchesAllPatternLayers("src/components/Button.tsx", layers)).toBe(true)
+		})
+
+		it("returns false when value fails to match one layer", () => {
+			const layers = [["src/.*"], ["src/components/.*"]]
+			// Matches src/.* but not src/components/.*
+			expect(matchesAllPatternLayers("src/utils/helper.ts", layers)).toBe(false)
+		})
+
+		it("handles single layer like matchesAnyPattern", () => {
+			const layers = [["src/.*", "tests/.*"]]
+			expect(matchesAllPatternLayers("tests/unit/test.ts", layers)).toBe(true)
+			expect(matchesAllPatternLayers("docs/readme.md", layers)).toBe(false)
 		})
 	})
 })

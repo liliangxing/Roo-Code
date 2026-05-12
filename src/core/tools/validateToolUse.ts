@@ -1,5 +1,5 @@
 import type { ToolName, ModeConfig, ExperimentId, GroupOptions, GroupEntry, TaskPermissions } from "@roo-code/types"
-import { toolNames as validToolNames, matchesAnyPattern } from "@roo-code/types"
+import { toolNames as validToolNames, matchesAnyPattern, matchesAllPatternLayers } from "@roo-code/types"
 import { customToolRegistry } from "@roo-code/core"
 
 import { type Mode, FileRestrictionError, getModeBySlug, getGroupName } from "../../shared/modes"
@@ -148,8 +148,13 @@ export function isToolAllowedForMode(
 
 	// Check TaskPermissions first -- these are set by the parent task via new_task
 	if (taskPermissions) {
-		// Check deniedTools
-		if (taskPermissions.deniedTools?.includes(resolvedTool) || taskPermissions.deniedTools?.includes(tool)) {
+		const isAlwaysAvailable = ALWAYS_AVAILABLE_TOOLS.includes(tool as any)
+
+		// Check deniedTools (but never deny always-available tools like attempt_completion)
+		if (
+			!isAlwaysAvailable &&
+			(taskPermissions.deniedTools?.includes(resolvedTool) || taskPermissions.deniedTools?.includes(tool))
+		) {
 			throw new TaskPermissionError(tool, "This tool is denied by the parent task's permission boundaries.")
 		}
 
@@ -159,14 +164,37 @@ export function isToolAllowedForMode(
 				taskPermissions.allowedTools.includes(resolvedTool) ||
 				taskPermissions.allowedTools.includes(tool) ||
 				// Always allow certain critical tools regardless of allowlist
-				ALWAYS_AVAILABLE_TOOLS.includes(tool as any)
+				isAlwaysAvailable
 			if (!isAllowed) {
 				throw new TaskPermissionError(tool, "This tool is not in the parent task's allowed tools list.")
 			}
 		}
 
-		// Check filePatterns for file-related operations
-		if (taskPermissions.filePatterns && taskPermissions.filePatterns.length > 0) {
+		// Check filePatterns using layered enforcement (AND between layers, OR within each layer).
+		// Falls back to flat filePatterns if no layers are present.
+		const filePatternLayers = taskPermissions._filePatternLayers
+		if (filePatternLayers && filePatternLayers.length > 0) {
+			const filePath = toolParams?.path || toolParams?.file_path
+			if (filePath && typeof filePath === "string") {
+				if (!matchesAllPatternLayers(filePath, filePatternLayers)) {
+					throw new TaskPermissionError(tool, `File "${filePath}" is outside the allowed file patterns.`)
+				}
+			}
+
+			// Check apply_patch file paths
+			if (tool === "apply_patch" && typeof toolParams?.patch === "string") {
+				const patchFilePaths = extractFilePathsFromPatch(toolParams.patch)
+				for (const patchFilePath of patchFilePaths) {
+					if (!matchesAllPatternLayers(patchFilePath, filePatternLayers)) {
+						throw new TaskPermissionError(
+							tool,
+							`File "${patchFilePath}" in patch is outside the allowed file patterns.`,
+						)
+					}
+				}
+			}
+		} else if (taskPermissions.filePatterns && taskPermissions.filePatterns.length > 0) {
+			// Fallback for non-merged permissions (single layer)
 			const filePath = toolParams?.path || toolParams?.file_path
 			if (filePath && typeof filePath === "string") {
 				if (!matchesAnyPattern(filePath, taskPermissions.filePatterns)) {
@@ -177,7 +205,6 @@ export function isToolAllowedForMode(
 				}
 			}
 
-			// Check apply_patch file paths
 			if (tool === "apply_patch" && typeof toolParams?.patch === "string") {
 				const patchFilePaths = extractFilePathsFromPatch(toolParams.patch)
 				for (const patchFilePath of patchFilePaths) {
@@ -191,12 +218,21 @@ export function isToolAllowedForMode(
 			}
 		}
 
-		// Check commandPatterns for execute_command
-		if (
+		// Check commandPatterns using layered enforcement
+		const commandPatternLayers = taskPermissions._commandPatternLayers
+		if (commandPatternLayers && commandPatternLayers.length > 0 && resolvedTool === "execute_command") {
+			const command = toolParams?.command
+			if (command && typeof command === "string") {
+				if (!matchesAllPatternLayers(command, commandPatternLayers)) {
+					throw new TaskPermissionError(tool, `Command "${command}" is outside the allowed command patterns.`)
+				}
+			}
+		} else if (
 			taskPermissions.commandPatterns &&
 			taskPermissions.commandPatterns.length > 0 &&
 			resolvedTool === "execute_command"
 		) {
+			// Fallback for non-merged permissions (single layer)
 			const command = toolParams?.command
 			if (command && typeof command === "string") {
 				if (!matchesAnyPattern(command, taskPermissions.commandPatterns)) {

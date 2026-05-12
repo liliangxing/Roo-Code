@@ -551,7 +551,6 @@ export class NativeToolCallParser {
 				if (partialArgs.todos !== undefined) {
 					nativeArgs = {
 						todos: partialArgs.todos,
-						permissions: partialArgs.permissions,
 					}
 				}
 				break
@@ -889,7 +888,6 @@ export class NativeToolCallParser {
 					if (args.todos !== undefined) {
 						nativeArgs = {
 							todos: args.todos,
-							permissions: args.permissions,
 						} as NativeArgsFor<TName>
 					}
 					break

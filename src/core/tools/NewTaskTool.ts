@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 
 import { TodoItem } from "@roo-code/types"
-import { type TaskPermissions, taskPermissionsSchema } from "@roo-code/types"
+import { type TaskPermissions, taskPermissionsSchema, toTaskPermissions } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import { getModeBySlug } from "../../shared/modes"
@@ -101,7 +101,7 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 						)
 						return
 					}
-					parsedPermissions = result.data
+					parsedPermissions = toTaskPermissions(result.data)
 				} catch (error) {
 					task.consecutiveMistakeCount++
 					task.recordToolError("new_task")
