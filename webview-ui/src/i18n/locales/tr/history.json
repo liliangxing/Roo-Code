@@ -56,5 +56,6 @@
 		"prefix": "Filtre:",
 		"all": "Tüm Görevler",
 		"foregroundOnly": "Yalnızca Ön Plan"
-	}
+	},
+	"interruptedTooltip": "This background task was interrupted because VS Code was closed while it was still running."
 }

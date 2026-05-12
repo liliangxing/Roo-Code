@@ -44,6 +44,7 @@ export default {
 				permissions: {
 					type: ["string", "null"],
 					description: PERMISSIONS_PARAMETER_DESCRIPTION,
+				},
 				background: {
 					type: ["string", "null"],
 					description: BACKGROUND_PARAMETER_DESCRIPTION,

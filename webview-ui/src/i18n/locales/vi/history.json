@@ -56,5 +56,6 @@
 		"prefix": "Bộ lọc:",
 		"all": "Tất cả tác vụ",
 		"foregroundOnly": "Chỉ tiền cảnh"
-	}
+	},
+	"interruptedTooltip": "This background task was interrupted because VS Code was closed while it was still running."
 }

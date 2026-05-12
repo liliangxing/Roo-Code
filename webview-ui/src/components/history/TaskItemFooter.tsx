@@ -32,13 +32,18 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({
 				{item.background && (
 					<>
 						{item.status === "interrupted" ? (
-							<AlertTriangle className="size-3 text-vscode-editorWarning-foreground" />
+							<StandardTooltip content={t("history:interruptedTooltip")}>
+								<span className="inline-flex items-center gap-1 text-vscode-editorWarning-foreground">
+									<AlertTriangle className="size-3" />
+									{t("history:interruptedTag")}
+								</span>
+							</StandardTooltip>
 						) : (
-							<Layers className="size-3" />
+							<>
+								<Layers className="size-3" />
+								<span>{t("history:backgroundTag")}</span>
+							</>
 						)}
-						<span>
-							{item.status === "interrupted" ? t("history:interruptedTag") : t("history:backgroundTag")}
-						</span>
 						<span>&middot;</span>
 					</>
 				)}

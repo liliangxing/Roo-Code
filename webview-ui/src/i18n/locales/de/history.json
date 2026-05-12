@@ -63,5 +63,6 @@
 		"prefix": "Filter:",
 		"all": "Alle Aufgaben",
 		"foregroundOnly": "Nur Vordergrund"
-	}
+	},
+	"interruptedTooltip": "This background task was interrupted because VS Code was closed while it was still running."
 }

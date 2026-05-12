@@ -50,6 +50,7 @@
 	"collapseSubtasks": "Collapse subtasks",
 	"backgroundTag": "Background",
 	"interruptedTag": "Interrupted",
+	"interruptedTooltip": "This background task was interrupted because VS Code was closed while it was still running.",
 	"showBackgroundTasks": "Show background tasks",
 	"hideBackgroundTasks": "Hide background tasks",
 	"filter": {

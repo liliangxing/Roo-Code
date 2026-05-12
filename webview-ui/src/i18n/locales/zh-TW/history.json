@@ -56,5 +56,6 @@
 		"prefix": "篩選：",
 		"all": "所有工作",
 		"foregroundOnly": "僅前景"
-	}
+	},
+	"interruptedTooltip": "This background task was interrupted because VS Code was closed while it was still running."
 }

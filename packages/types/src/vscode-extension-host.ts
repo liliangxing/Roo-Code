@@ -573,8 +573,7 @@ export interface WebviewMessage {
 	text?: string
 	taskId?: string
 	editedMessageContent?: string
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "cloud"
-	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "bgTaskReplay" | "bgTask"
+	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "cloud" | "bgTaskReplay" | "bgTask"
 	disabled?: boolean
 	context?: string
 	dataUri?: string

@@ -56,5 +56,6 @@
 		"prefix": "필터:",
 		"all": "모든 작업",
 		"foregroundOnly": "포그라운드만"
-	}
+	},
+	"interruptedTooltip": "This background task was interrupted because VS Code was closed while it was still running."
 }

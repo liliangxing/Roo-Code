@@ -56,5 +56,6 @@
 		"prefix": "フィルター：",
 		"all": "すべてのタスク",
 		"foregroundOnly": "フォアグラウンドのみ"
-	}
+	},
+	"interruptedTooltip": "This background task was interrupted because VS Code was closed while it was still running."
 }
