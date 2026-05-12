@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react"
+import React, { useState, useCallback, useMemo } from "react"
 
 import type { BackgroundTaskStatusInfo } from "@roo-code/types"
 
@@ -69,11 +69,20 @@ function getStatusColor(status: BackgroundTaskStatusInfo["status"]): string {
 
 function BackgroundTaskItem({ task }: { task: BackgroundTaskStatusInfo }) {
 	const [showResult, setShowResult] = useState(false)
+	const [confirmingCancel, setConfirmingCancel] = useState(false)
 	const isRunning = task.status === "running"
 
-	const handleCancel = () => {
+	const handleCancelClick = useCallback(() => {
+		if (!confirmingCancel) {
+			setConfirmingCancel(true)
+			// Auto-reset after 3 seconds if user doesn't confirm
+			setTimeout(() => setConfirmingCancel(false), 3000)
+			return
+		}
+		// Second click confirms cancellation
+		setConfirmingCancel(false)
 		vscode.postMessage({ type: "cancelBackgroundTask", taskId: task.taskId })
-	}
+	}, [confirmingCancel, task.taskId])
 
 	const shortId = task.taskId.slice(0, 8)
 
@@ -102,10 +111,18 @@ function BackgroundTaskItem({ task }: { task: BackgroundTaskStatusInfo }) {
 					)}
 					{isRunning && (
 						<button
-							className="text-xs text-vscode-errorForeground hover:opacity-80 cursor-pointer bg-transparent border-none p-0 flex items-center gap-0.5"
-							onClick={handleCancel}
-							title="Cancel background task">
-							<span className="codicon codicon-stop-circle text-xs" />
+							className={`text-xs cursor-pointer bg-transparent border-none p-0 flex items-center gap-0.5 ${
+								confirmingCancel
+									? "text-vscode-errorForeground font-medium"
+									: "text-vscode-errorForeground hover:opacity-80"
+							}`}
+							onClick={handleCancelClick}
+							title={confirmingCancel ? "Click again to confirm cancellation" : "Cancel background task"}>
+							{confirmingCancel ? (
+								<span>Cancel?</span>
+							) : (
+								<span className="codicon codicon-stop-circle text-xs" />
+							)}
 						</button>
 					)}
 				</div>
@@ -123,6 +140,16 @@ function BackgroundTaskItem({ task }: { task: BackgroundTaskStatusInfo }) {
  * BackgroundTasksPanel shows active and recently completed background tasks
  * as a collapsible section in the chat sidebar. Only renders when there are
  * background tasks to display.
+ *
+ * Phase 6+ evolution notes:
+ * - This panel can be promoted to a tab-based view alongside the main chat
+ *   by extracting the task list into a shared component and rendering it in
+ *   both the sidebar panel and a dedicated "Background Tasks" tab.
+ * - For real-time progress streaming, each BackgroundTaskItem could accept
+ *   a `progressMessages` prop with the last N tool-call summaries.
+ * - For conversation replay, clicking a completed task could open its full
+ *   message history in a read-only chat view (reuse ChatView with a
+ *   `readOnly` flag and the task's clineMessages).
  */
 const BackgroundTasksPanel: React.FC = () => {
 	const { backgroundTasks } = useExtensionState()
@@ -155,7 +182,7 @@ const BackgroundTasksPanel: React.FC = () => {
 				<span className="text-[10px] text-vscode-descriptionForeground">{tasks.length} total</span>
 			</button>
 			{!isCollapsed && (
-				<div className="px-2 pb-1.5">
+				<div className="px-2 pb-1.5 max-h-[200px] overflow-y-auto">
 					{tasks.map((task) => (
 						<BackgroundTaskItem key={task.taskId} task={task} />
 					))}
