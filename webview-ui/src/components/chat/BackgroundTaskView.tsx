@@ -1,28 +1,41 @@
 import { memo, useCallback, useState } from "react"
 import { ArrowLeft } from "lucide-react"
 
+import { useExtensionState } from "@src/context/ExtensionStateContext"
+
 import BackgroundTasksList from "./BackgroundTasksList"
 import BackgroundTaskReplayView from "./BackgroundTaskReplayView"
+import BackgroundTaskLiveView from "./BackgroundTaskLiveView"
 
-type BackgroundTaskSubView = "list" | "replay"
+type BackgroundTaskSubView = "list" | "replay" | "live"
 
 export interface BackgroundTaskViewProps {
 	onClose: () => void
 }
 
 /**
- * Full-tab container for the background tasks feature (Phase 6b).
- * Manages navigation between BackgroundTasksList and BackgroundTaskReplayView.
- * Later, BackgroundTaskLiveView (Phase 6c) will be added as another sub-view.
+ * Full-tab container for the background tasks feature (Phase 6b/6c).
+ * Manages navigation between BackgroundTasksList, BackgroundTaskReplayView,
+ * and BackgroundTaskLiveView.
  */
 const BackgroundTaskView = memo(({ onClose }: BackgroundTaskViewProps) => {
 	const [subView, setSubView] = useState<BackgroundTaskSubView>("list")
 	const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+	const { taskHistory } = useExtensionState()
 
-	const handleSelectTask = useCallback((taskId: string) => {
-		setSelectedTaskId(taskId)
-		setSubView("replay")
-	}, [])
+	const handleSelectTask = useCallback(
+		(taskId: string) => {
+			setSelectedTaskId(taskId)
+			// Route to live view for active tasks, replay for completed
+			const task = taskHistory.find((t) => t.id === taskId)
+			if (task?.status === "active") {
+				setSubView("live")
+			} else {
+				setSubView("replay")
+			}
+		},
+		[taskHistory],
+	)
 
 	const handleBackToList = useCallback(() => {
 		setSelectedTaskId(null)
@@ -56,6 +69,9 @@ const BackgroundTaskView = memo(({ onClose }: BackgroundTaskViewProps) => {
 				{subView === "list" && <BackgroundTasksList onSelectTask={handleSelectTask} />}
 				{subView === "replay" && selectedTaskId && (
 					<BackgroundTaskReplayView taskId={selectedTaskId} onClose={handleBackToList} />
+				)}
+				{subView === "live" && selectedTaskId && (
+					<BackgroundTaskLiveView taskId={selectedTaskId} onClose={handleBackToList} />
 				)}
 			</div>
 		</div>

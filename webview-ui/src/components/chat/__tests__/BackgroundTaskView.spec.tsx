@@ -62,6 +62,20 @@ vi.mock("../ChatRow", () => ({
 	},
 }))
 
+// Mock BackgroundTaskLiveView
+vi.mock("../BackgroundTaskLiveView", () => ({
+	default: function MockBackgroundTaskLiveView({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+		return (
+			<div data-testid="background-task-live-view">
+				<button data-testid="live-back-button" onClick={onClose}>
+					Back
+				</button>
+				<span>Live view for {taskId}</span>
+			</div>
+		)
+	},
+}))
+
 describe("BackgroundTaskView", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -132,5 +146,31 @@ describe("BackgroundTaskView", () => {
 
 		// Top header should be hidden -- replay has its own back button
 		expect(screen.queryByTestId("background-task-view-header")).toBeNull()
+	})
+
+	it("navigates to live view when an active task is clicked", () => {
+		render(<BackgroundTaskView onClose={vi.fn()} />)
+
+		// Click on the active task (bg-task-2 has status "active")
+		fireEvent.click(screen.getByTestId("background-task-item-bg-task-2"))
+
+		// Should show the live view, not the replay view
+		expect(screen.getByTestId("background-task-live-view")).toBeTruthy()
+		expect(screen.queryByTestId("replay-loading")).toBeNull()
+		expect(screen.queryByTestId("background-tasks-list")).toBeNull()
+	})
+
+	it("navigates back to list from live view via back button", () => {
+		render(<BackgroundTaskView onClose={vi.fn()} />)
+
+		// Navigate to live view for active task
+		fireEvent.click(screen.getByTestId("background-task-item-bg-task-2"))
+		expect(screen.getByTestId("background-task-live-view")).toBeTruthy()
+
+		// Click back button in live view
+		fireEvent.click(screen.getByTestId("live-back-button"))
+
+		// Should return to list view
+		expect(screen.getByTestId("background-tasks-list")).toBeTruthy()
 	})
 })

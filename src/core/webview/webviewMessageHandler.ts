@@ -780,6 +780,15 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			}
 			break
 		}
+		case "subscribeToBackgroundTask": {
+			const taskId = message.text
+			provider.viewedBackgroundTaskId = taskId ?? null
+			break
+		}
+		case "unsubscribeFromBackgroundTask": {
+			provider.viewedBackgroundTaskId = null
+			break
+		}
 		case "condenseTaskContextRequest":
 			provider.condenseTaskContext(message.text!)
 			break
