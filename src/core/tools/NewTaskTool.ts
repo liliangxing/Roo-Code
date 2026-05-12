@@ -15,14 +15,17 @@ interface NewTaskParams {
 	mode: string
 	message: string
 	todos?: string
+	/** When true, the task runs in the background concurrently with the parent. Read-only tools only. */
+	background?: string
 }
 
 export class NewTaskTool extends BaseTool<"new_task"> {
 	readonly name = "new_task" as const
 
 	async execute(params: NewTaskParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { mode, message, todos } = params
+		const { mode, message, todos, background } = params
 		const { askApproval, handleError, pushToolResult } = callbacks
+		const isBackground = background === "true"
 
 		try {
 			// Validate required parameters.
@@ -60,7 +63,8 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 
 			// Check if todos are required based on VSCode setting.
 			// Note: `undefined` means not provided, empty string is valid.
-			if (requireTodos && todos === undefined) {
+			// Background tasks don't require todos (they're read-only).
+			if (requireTodos && todos === undefined && !isBackground) {
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
 				task.didToolFailInCurrentTurn = true
@@ -101,11 +105,35 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				mode: targetMode.name,
 				content: message,
 				todos: todoItems,
+				background: isBackground,
 			})
 
 			const didApprove = await askApproval("tool", toolMessage)
 
 			if (!didApprove) {
+				return
+			}
+
+			if (isBackground) {
+				// Spawn as a background task - parent continues executing
+				try {
+					const bgTask = await (provider as any).spawnBackgroundTask({
+						parentTaskId: task.taskId,
+						message: unescapedMessage,
+						mode,
+					})
+					pushToolResult(
+						`Background task ${bgTask.taskId} spawned in ${targetMode.name} mode. ` +
+							`It will run concurrently with read-only tools. ` +
+							`Results will be delivered when it completes.`,
+					)
+				} catch (error) {
+					pushToolResult(
+						formatResponse.toolError(
+							`Failed to spawn background task: ${error instanceof Error ? error.message : String(error)}`,
+						),
+					)
+				}
 				return
 			}
 

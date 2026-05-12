@@ -153,6 +153,10 @@ export interface TaskOptions extends CreateTaskOptions {
 	workspacePath?: string
 	/** Initial status for the task's history item (e.g., "active" for child tasks) */
 	initialStatus?: "active" | "delegated" | "completed"
+	/** When true, the task runs in the background: webview updates are suppressed and all tool uses are auto-approved. */
+	isBackgroundTask?: boolean
+	/** Callback invoked when a background task completes (via attempt_completion). */
+	onBackgroundComplete?: (taskId: string, result: string) => void
 }
 
 export class Task extends EventEmitter<TaskEvents> implements TaskLike {
@@ -164,6 +168,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	readonly instanceId: string
 	readonly metadata: TaskMetadata
+
+	/** When true, this task runs in the background with webview silencing and auto-approval. */
+	readonly isBackgroundTask: boolean
+	/** Callback for background task completion result delivery. */
+	readonly onBackgroundComplete?: (taskId: string, result: string) => void
 
 	todoList?: TodoItem[]
 
@@ -430,6 +439,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		initialTodos,
 		workspacePath,
 		initialStatus,
+		isBackgroundTask = false,
+		onBackgroundComplete,
 	}: TaskOptions) {
 		super()
 
@@ -491,6 +502,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.parentTask = parentTask
 		this.taskNumber = taskNumber
 		this.initialStatus = initialStatus
+		this.isBackgroundTask = isBackgroundTask
+		this.onBackgroundComplete = onBackgroundComplete
 
 		this.assistantMessageParser = undefined
 
@@ -1143,10 +1156,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	private async addToClineMessages(message: ClineMessage) {
 		this.clineMessages.push(message)
-		const provider = this.providerRef.deref()
-		// Avoid resending large, mostly-static fields (notably taskHistory) on every chat message update.
-		// taskHistory is maintained in-memory in the webview and updated via taskHistoryItemUpdated.
-		await provider?.postStateToWebviewWithoutTaskHistory()
+
+		if (!this.isBackgroundTask) {
+			const provider = this.providerRef.deref()
+			// Avoid resending large, mostly-static fields (notably taskHistory) on every chat message update.
+			// taskHistory is maintained in-memory in the webview and updated via taskHistoryItemUpdated.
+			await provider?.postStateToWebviewWithoutTaskHistory()
+		}
+
 		this.emit(RooCodeEventName.Message, { action: "created", message })
 		await this.saveClineMessages()
 	}
@@ -1158,8 +1175,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	private async updateClineMessage(message: ClineMessage) {
-		const provider = this.providerRef.deref()
-		await provider?.postMessageToWebview({ type: "messageUpdated", clineMessage: message })
+		if (!this.isBackgroundTask) {
+			const provider = this.providerRef.deref()
+			await provider?.postMessageToWebview({ type: "messageUpdated", clineMessage: message })
+		}
+
 		this.emit(RooCodeEventName.Message, { action: "updated", message })
 	}
 
@@ -1195,7 +1215,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// - Final state is emitted when updates stop (trailing: true)
 			this.debouncedEmitTokenUsage(tokenUsage, this.toolUsage)
 
-			await this.providerRef.deref()?.updateTaskHistory(historyItem)
+			if (!this.isBackgroundTask) {
+				await this.providerRef.deref()?.updateTaskHistory(historyItem)
+			}
 			return true
 		} catch (error) {
 			console.error("Failed to save Roo messages:", error)
@@ -1314,6 +1336,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		let timeouts: NodeJS.Timeout[] = []
+
+		// Background tasks auto-approve all asks immediately (no user interaction).
+		if (this.isBackgroundTask) {
+			this.approveAsk()
+			await pWaitFor(() => this.askResponse !== undefined || this.lastMessageTs !== askTs, { interval: 100 })
+			if (this.lastMessageTs !== askTs) {
+				throw new AskIgnoredError("superseded")
+			}
+			const result = { response: this.askResponse!, text: this.askResponseText, images: this.askResponseImages }
+			this.askResponse = undefined
+			this.askResponseText = undefined
+			this.askResponseImages = undefined
+			return result
+		}
 
 		// Automatically approve if the ask according to the user's settings.
 		const provider = this.providerRef.deref()

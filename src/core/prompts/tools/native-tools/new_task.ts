@@ -10,6 +10,8 @@ const MESSAGE_PARAMETER_DESCRIPTION = `Initial user instructions or context for 
 
 const TODOS_PARAMETER_DESCRIPTION = `Optional initial todo list written as a markdown checklist; required when the workspace mandates todos`
 
+const BACKGROUND_PARAMETER_DESCRIPTION = `When set to "true", the task runs in the background concurrently with the current task. Background tasks are restricted to read-only tools only (read_file, list_files, search_files, codebase_search). Results are delivered asynchronously when the background task completes. Use for research, analysis, or documentation lookup while continuing other work.`
+
 export default {
 	type: "function",
 	function: {
@@ -31,8 +33,12 @@ export default {
 					type: ["string", "null"],
 					description: TODOS_PARAMETER_DESCRIPTION,
 				},
+				background: {
+					type: ["string", "null"],
+					description: BACKGROUND_PARAMETER_DESCRIPTION,
+				},
 			},
-			required: ["mode", "message", "todos"],
+			required: ["mode", "message", "todos", "background"],
 			additionalProperties: false,
 		},
 	},
