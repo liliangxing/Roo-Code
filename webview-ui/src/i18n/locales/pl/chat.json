@@ -259,7 +259,12 @@
 		"resultContent": "Wyniki podzadania",
 		"defaultResult": "Proszę kontynuować następne zadanie.",
 		"completionInstructions": "Podzadanie zakończone! Możesz przejrzeć wyniki i zasugerować poprawki lub następne kroki. Jeśli wszystko wygląda dobrze, potwierdź, aby zwrócić wynik do zadania nadrzędnego.",
-		"goToSubtask": "Wyświetl zadanie"
+		"goToSubtask": "Wyświetl zadanie",
+		"permissionBoundaries": "Granice uprawnień",
+		"permissionFilePatterns": "Dozwolone pliki: {{patterns}}",
+		"permissionCommandPatterns": "Dozwolone polecenia: {{patterns}}",
+		"permissionAllowedTools": "Dozwolone narzędzia: {{tools}}",
+		"permissionDeniedTools": "Odmówione narzędzia: {{tools}}"
 	},
 	"questions": {
 		"hasQuestion": "Roo ma pytanie"
@@ -484,5 +489,13 @@
 		"title": "Dostawca nie jest już obsługiwany",
 		"message": "Przepraszamy, ten dostawca nie jest już obsługiwany. Zauważyliśmy, że bardzo niewielu użytkowników Roo faktycznie z niego korzystało, a my musimy zmniejszyć zakres naszego kodu, aby móc dalej szybko dostarczać i dobrze służyć naszej społeczności. To była naprawdę trudna decyzja, ale pozwala nam skupić się na tym, co jest dla ciebie najważniejsze. Wiemy, że to frustrujące.",
 		"openSettings": "Otwórz ustawienia"
+	},
+	"contextHandoff": {
+		"title": "Podsumowanie przekazania kontekstu",
+		"mode": "Tryb",
+		"filesModified": "Zmodyfikowane pliki",
+		"filesRead": "Odczytane pliki",
+		"commandsExecuted": "Wykonane polecenia",
+		"apiRequests": "Żądania API"
 	}
 }
