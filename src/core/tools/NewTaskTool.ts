@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 
 import { TodoItem } from "@roo-code/types"
+import type { SubtaskQueueItem } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import { getModeBySlug } from "../../shared/modes"
@@ -15,13 +16,14 @@ interface NewTaskParams {
 	mode: string
 	message: string
 	todos?: string
+	task_queue?: string
 }
 
 export class NewTaskTool extends BaseTool<"new_task"> {
 	readonly name = "new_task" as const
 
 	async execute(params: NewTaskParams, task: Task, callbacks: ToolCallbacks): Promise<void> {
-		const { mode, message, todos } = params
+		const { mode, message, todos, task_queue } = params
 		const { askApproval, handleError, pushToolResult } = callbacks
 
 		try {
@@ -96,11 +98,47 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				return
 			}
 
+			// Parse task_queue if provided (sequential fan-out)
+			let queueItems: SubtaskQueueItem[] = []
+			if (task_queue) {
+				try {
+					const parsed = JSON.parse(task_queue)
+					if (Array.isArray(parsed)) {
+						for (const item of parsed) {
+							if (typeof item.mode === "string" && typeof item.message === "string") {
+								// Validate each queued mode exists
+								const queuedMode = getModeBySlug(item.mode, state?.customModes)
+								if (!queuedMode) {
+									pushToolResult(
+										formatResponse.toolError(
+											`Invalid mode in task_queue: "${item.mode}". All queued subtasks must use valid modes.`,
+										),
+									)
+									return
+								}
+								queueItems.push({ mode: item.mode, message: item.message })
+							}
+						}
+					}
+				} catch {
+					task.consecutiveMistakeCount++
+					task.recordToolError("new_task")
+					task.didToolFailInCurrentTurn = true
+					pushToolResult(
+						formatResponse.toolError(
+							"Invalid task_queue format: must be a JSON array of objects with 'mode' and 'message' properties.",
+						),
+					)
+					return
+				}
+			}
+
 			const toolMessage = JSON.stringify({
 				tool: "newTask",
 				mode: targetMode.name,
 				content: message,
 				todos: todoItems,
+				taskQueue: queueItems.length > 0 ? queueItems : undefined,
 			})
 
 			const didApprove = await askApproval("tool", toolMessage)
@@ -115,10 +153,15 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 				message: unescapedMessage,
 				initialTodos: todoItems,
 				mode,
+				subtaskQueue: queueItems.length > 0 ? queueItems : undefined,
 			})
 
 			// Reflect delegation in tool result (no pause/unpause, no wait)
-			pushToolResult(`Delegated to child task ${child.taskId}`)
+			const queueMsg =
+				queueItems.length > 0
+					? ` (${queueItems.length} additional subtask${queueItems.length > 1 ? "s" : ""} queued)`
+					: ""
+			pushToolResult(`Delegated to child task ${child.taskId}${queueMsg}`)
 			return
 		} catch (error) {
 			await handleError("creating new task", error)
@@ -130,12 +173,14 @@ export class NewTaskTool extends BaseTool<"new_task"> {
 		const mode: string | undefined = block.params.mode
 		const message: string | undefined = block.params.message
 		const todos: string | undefined = block.params.todos
+		const taskQueue: string | undefined = block.params.task_queue
 
 		const partialMessage = JSON.stringify({
 			tool: "newTask",
 			mode: mode ?? "",
 			content: message ?? "",
 			todos: todos,
+			taskQueue: taskQueue,
 		})
 
 		await task.ask("tool", partialMessage, block.partial).catch(() => {})
