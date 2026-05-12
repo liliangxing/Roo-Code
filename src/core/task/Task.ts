@@ -1397,6 +1397,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		let timeouts: NodeJS.Timeout[] = []
 
 		// Background tasks auto-approve all asks immediately (no user interaction).
+		// Design decision: Full auto-approval is safe here because background tasks
+		// are restricted to read-only tools only (read_file, list_files, search_files,
+		// codebase_search). They cannot modify files, execute commands, or perform any
+		// destructive operations. If a future phase introduces write-capable background
+		// tasks, this auto-approval should be revisited to allow selective user input
+		// for dangerous operations.
 		if (this.isBackgroundTask) {
 			this.approveAsk()
 			await pWaitFor(() => this.askResponse !== undefined || this.lastMessageTs !== askTs, { interval: 100 })

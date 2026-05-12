@@ -35,17 +35,31 @@ export interface BackgroundTaskInfo {
 	timeoutHandle: ReturnType<typeof setTimeout>
 }
 
+/**
+ * Optional callbacks that allow the owner (e.g. ClineProvider) to react to
+ * background task lifecycle events such as completion, timeout, or errors.
+ */
+export interface BackgroundTaskRunnerCallbacks {
+	/** Called when a background task times out. */
+	onTaskTimeout?: (taskId: string, parentTaskId: string) => void
+	/** Called when aborting a background task throws an error. */
+	onTaskError?: (taskId: string, parentTaskId: string, error: Error) => void
+}
+
 export class BackgroundTaskRunner {
 	private backgroundTasks: Map<string, BackgroundTaskInfo> = new Map()
 	private maxConcurrentTasks: number
 	private taskTimeoutMs: number
+	private callbacks: BackgroundTaskRunnerCallbacks
 
 	constructor(
 		maxConcurrentTasks: number = DEFAULT_MAX_BACKGROUND_TASKS,
 		taskTimeoutMs: number = DEFAULT_BACKGROUND_TASK_TIMEOUT_MS,
+		callbacks: BackgroundTaskRunnerCallbacks = {},
 	) {
 		this.maxConcurrentTasks = maxConcurrentTasks
 		this.taskTimeoutMs = taskTimeoutMs
+		this.callbacks = callbacks
 	}
 
 	/**
@@ -163,11 +177,13 @@ export class BackgroundTaskRunner {
 		try {
 			await info.task.abortTask(true)
 		} catch (error) {
-			console.error(
-				`[BackgroundTaskRunner] Error aborting background task ${taskId}: ${
-					error instanceof Error ? error.message : String(error)
-				}`,
-			)
+			const err = error instanceof Error ? error : new Error(String(error))
+			console.error(`[BackgroundTaskRunner] Error aborting background task ${taskId}: ${err.message}`)
+			try {
+				this.callbacks.onTaskError?.(taskId, info.parentTaskId, err)
+			} catch {
+				// Callback errors must not break cleanup.
+			}
 		}
 
 		this.backgroundTasks.delete(taskId)
@@ -193,7 +209,17 @@ export class BackgroundTaskRunner {
 	 * Handle timeout of a background task.
 	 */
 	private async timeoutTask(taskId: string): Promise<void> {
+		const info = this.backgroundTasks.get(taskId)
+		const parentTaskId = info?.parentTaskId ?? "unknown"
+
 		console.warn(`[BackgroundTaskRunner] Background task ${taskId} timed out after ${this.taskTimeoutMs}ms`)
+
+		try {
+			this.callbacks.onTaskTimeout?.(taskId, parentTaskId)
+		} catch {
+			// Callback errors must not break cleanup.
+		}
+
 		await this.cancelTask(taskId)
 	}
 }

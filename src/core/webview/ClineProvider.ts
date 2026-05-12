@@ -85,6 +85,11 @@ import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
 import { buildTaskContext } from "../task/TaskContextBuilder"
 import { BackgroundTaskRunner, BACKGROUND_TASK_ALLOWED_TOOLS } from "../task/BackgroundTaskRunner"
+import {
+	BackgroundTaskRunner,
+	BACKGROUND_TASK_ALLOWED_TOOLS,
+	BackgroundTaskRunnerCallbacks,
+} from "../task/BackgroundTaskRunner"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
 import type { ClineMessage, TodoItem, SubtaskQueueItem, TaskPermissions, ContextHandoffSummary } from "@roo-code/types"
@@ -144,7 +149,14 @@ export class ClineProvider
 	private recentTasksCache?: string[]
 	public readonly taskHistoryStore: TaskHistoryStore
 	private taskHistoryStoreInitialized = false
-	public readonly backgroundTaskRunner: BackgroundTaskRunner = new BackgroundTaskRunner()
+	public readonly backgroundTaskRunner: BackgroundTaskRunner = new BackgroundTaskRunner(undefined, undefined, {
+		onTaskTimeout: (taskId, _parentTaskId) => {
+			vscode.window.showWarningMessage(`Background task ${taskId} timed out and was cancelled.`)
+		},
+		onTaskError: (taskId, _parentTaskId, error) => {
+			vscode.window.showWarningMessage(`Background task ${taskId} encountered an error: ${error.message}`)
+		},
+	})
 	private globalStateWriteThroughTimer: ReturnType<typeof setTimeout> | null = null
 	private static readonly GLOBAL_STATE_WRITE_THROUGH_DEBOUNCE_MS = 5000 // 5 seconds
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
@@ -3264,6 +3276,9 @@ export class ClineProvider
 			this.log(`[handleBackgroundTaskComplete] Task ${taskId} not found in background runner`)
 			return
 		}
+
+		// Notify the user that the background task finished.
+		vscode.window.showInformationMessage(`Background task ${taskId} completed.`)
 
 		const parentTaskId = info.parentTaskId
 		const currentTask = this.getCurrentTask()
