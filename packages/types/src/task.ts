@@ -4,6 +4,7 @@ import { RooCodeEventName } from "./events.js"
 import type { RooCodeSettings } from "./global-settings.js"
 import type { ClineMessage, QueuedMessage, TokenUsage } from "./message.js"
 import type { ToolUsage, ToolName } from "./tool.js"
+import type { TaskPermissions } from "./task-permissions.js"
 import type { TodoItem } from "./todo.js"
 
 /**
@@ -94,6 +95,9 @@ export interface CreateTaskOptions {
 	/** Whether to start the task loop immediately (default: true).
 	 *  When false, the caller must invoke `task.start()` manually. */
 	startTask?: boolean
+	/** Permission boundaries for the task, set by the parent via new_task tool.
+	 *  When set, restricts what file paths, commands, and tools the task may use. */
+	taskPermissions?: TaskPermissions
 }
 
 export enum TaskStatus {

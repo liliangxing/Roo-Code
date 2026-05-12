@@ -39,6 +39,8 @@ import {
 	TaskStatus,
 	TodoItem,
 	getApiProtocol,
+	type TaskPermissions,
+	mergeTaskPermissions,
 	getModelId,
 	isRetiredProvider,
 	isIdleAsk,
@@ -159,6 +161,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	readonly taskId: string
 	readonly rootTaskId?: string
 	readonly parentTaskId?: string
+	readonly taskPermissions?: TaskPermissions
 	childTaskId?: string
 	pendingNewTaskToolCallId?: string
 
@@ -430,6 +433,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		initialTodos,
 		workspacePath,
 		initialStatus,
+		taskPermissions,
 	}: TaskOptions) {
 		super()
 
@@ -455,6 +459,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.rootTaskId = historyItem ? historyItem.rootTaskId : rootTask?.taskId
 		this.parentTaskId = historyItem ? historyItem.parentTaskId : parentTask?.taskId
 		this.childTaskId = undefined
+
+		// Merge task permissions with parent (most-restrictive-wins)
+		this.taskPermissions = mergeTaskPermissions(parentTask?.taskPermissions, taskPermissions)
 
 		this.metadata = {
 			task: historyItem ? historyItem.task : task,

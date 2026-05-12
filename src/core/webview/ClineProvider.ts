@@ -82,7 +82,7 @@ import { CustomModesManager } from "../config/CustomModesManager"
 import { Task } from "../task/Task"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import type { ClineMessage, TodoItem } from "@roo-code/types"
+import type { ClineMessage, TodoItem, TaskPermissions } from "@roo-code/types"
 import { readApiMessages, saveApiMessages, saveTaskMessages, TaskHistoryStore } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
 import { getNonce } from "./getNonce"
@@ -2785,8 +2785,9 @@ export class ClineProvider
 		message: string
 		initialTodos: TodoItem[]
 		mode: string
+		permissions?: TaskPermissions
 	}): Promise<Task> {
-		const { parentTaskId, message, initialTodos, mode } = params
+		const { parentTaskId, message, initialTodos, mode, permissions } = params
 
 		// Metadata-driven delegation is always enabled
 
@@ -2876,6 +2877,7 @@ export class ClineProvider
 		const child = await this.createTask(message, undefined, parent as any, {
 			initialTodos,
 			initialStatus: "active",
+			taskPermissions: permissions,
 			startTask: false,
 		})
 

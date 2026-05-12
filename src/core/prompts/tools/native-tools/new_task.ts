@@ -10,6 +10,8 @@ const MESSAGE_PARAMETER_DESCRIPTION = `Initial user instructions or context for 
 
 const TODOS_PARAMETER_DESCRIPTION = `Optional initial todo list written as a markdown checklist; required when the workspace mandates todos`
 
+const PERMISSIONS_PARAMETER_DESCRIPTION = `Optional JSON object defining permission boundaries for the subtask. Allows the parent to restrict the subtask's access. Supports: filePatterns (array of regex patterns for allowed file paths), commandPatterns (array of regex patterns for allowed commands), allowedTools (array of tool names the subtask may use), deniedTools (array of tool names the subtask may NOT use). Example: {"filePatterns":["src/components/.*"],"commandPatterns":["npm test.*"],"deniedTools":["execute_command"]}`
+
 export default {
 	type: "function",
 	function: {
@@ -30,6 +32,10 @@ export default {
 				todos: {
 					type: ["string", "null"],
 					description: TODOS_PARAMETER_DESCRIPTION,
+				},
+				permissions: {
+					type: ["string", "null"],
+					description: PERMISSIONS_PARAMETER_DESCRIPTION,
 				},
 			},
 			required: ["mode", "message", "todos"],
