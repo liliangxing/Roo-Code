@@ -86,7 +86,8 @@ import { Task } from "../task/Task"
 import { buildTaskContext } from "../task/TaskContextBuilder"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
-import type { ClineMessage, TodoItem, SubtaskQueueItem, TaskPermissions } from "@roo-code/types"
+import type { ClineMessage, TodoItem, SubtaskQueueItem, TaskPermissions, ContextHandoffSummary } from "@roo-code/types"
+import { collectContextSummary, formatContextSummaryForParent } from "../context-handoff/collectContextSummary"
 import { readApiMessages, saveApiMessages, saveTaskMessages, TaskHistoryStore } from "../task-persistence"
 import { readTaskMessages } from "../task-persistence/taskMessages"
 import { getNonce } from "./getNonce"
@@ -3213,6 +3214,42 @@ export class ClineProvider
 			parentApiMessages = []
 		}
 
+		// 1b) Collect structured context from the child's clineMessages
+		let contextSummary: ContextHandoffSummary | undefined
+		let formattedSummary = completionResultSummary
+		try {
+			let childClineMessages: ClineMessage[] = []
+			// Prefer in-memory messages from the current task if it's still the active child
+			const currentTask = this.getCurrentTask()
+			if (currentTask?.taskId === childTaskId && currentTask.clineMessages.length > 0) {
+				childClineMessages = currentTask.clineMessages
+			} else {
+				childClineMessages = await readTaskMessages({
+					taskId: childTaskId,
+					globalStoragePath,
+				})
+			}
+
+			// Get child's mode from history
+			let childMode: string | undefined
+			try {
+				const { historyItem: childHistory } = await this.getTaskWithId(childTaskId)
+				childMode = childHistory.mode
+			} catch {
+				// non-fatal
+			}
+
+			contextSummary = collectContextSummary(childClineMessages, childMode, completionResultSummary)
+			formattedSummary = formatContextSummaryForParent(contextSummary)
+		} catch (err) {
+			this.log(
+				`[reopenParentFromDelegation] Failed to collect context summary for child ${childTaskId} (non-fatal): ${
+					(err as Error)?.message ?? String(err)
+				}`,
+			)
+			// Fall back to unstructured summary
+		}
+
 		// 2) Inject synthetic records: UI subtask_result and update API tool_result
 		const ts = Date.now()
 
@@ -3239,6 +3276,7 @@ export class ClineProvider
 			type: "say",
 			say: "subtask_result",
 			text: effectiveSummary,
+			text: contextSummary ? JSON.stringify(contextSummary) : completionResultSummary,
 			ts,
 		}
 		parentClineMessages.push(subtaskUiMessage)
@@ -3272,6 +3310,8 @@ export class ClineProvider
 					if (block.type === "tool_result" && block.tool_use_id === toolUseId) {
 						// Update the existing tool_result content with enriched summary
 						block.content = apiResultText
+						// Update the existing tool_result content
+						block.content = `Subtask ${childTaskId} completed.\n\n${formattedSummary}`
 						alreadyHasToolResult = true
 						break
 					}
@@ -3287,6 +3327,7 @@ export class ClineProvider
 							type: "tool_result" as const,
 							tool_use_id: toolUseId,
 							content: apiResultText,
+							content: `Subtask ${childTaskId} completed.\n\n${formattedSummary}`,
 						},
 					],
 					ts,
@@ -3352,6 +3393,8 @@ export class ClineProvider
 			status: "active",
 			completedByChildId: childTaskId,
 			completionResultSummary: effectiveSummary,
+			completionResultSummary,
+			contextHandoffSummary: contextSummary,
 			awaitingChildId: undefined,
 			childIds,
 		}

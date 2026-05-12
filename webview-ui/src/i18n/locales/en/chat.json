@@ -320,6 +320,14 @@
 		"permissionAllowedTools": "Allowed tools: {{tools}}",
 		"permissionDeniedTools": "Denied tools: {{tools}}"
 	},
+	"contextHandoff": {
+		"title": "Context Handoff Summary",
+		"mode": "Mode",
+		"filesModified": "Files Modified",
+		"filesRead": "Files Read",
+		"commandsExecuted": "Commands Executed",
+		"apiRequests": "API Requests"
+	},
 	"questions": {
 		"hasQuestion": "Roo has a question"
 	},

@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { contextHandoffSummarySchema } from "./context-handoff.js"
 import { taskPermissionsSchema } from "./task-permissions.js"
 
 /**
@@ -54,6 +55,7 @@ export const historyItemSchema = z.object({
 	subtaskQueue: z.array(subtaskQueueItemSchema).optional(), // Remaining subtasks to execute
 	subtaskQueueIndex: z.number().optional(), // Current position in the original queue (0-based)
 	subtaskResults: z.array(subtaskResultSchema).optional(), // Results from completed queue subtasks
+	contextHandoffSummary: contextHandoffSummarySchema.optional(), // Structured context from completed child
 	taskPermissions: taskPermissionsSchema.optional(), // Permission boundaries set by parent task
 })
 
