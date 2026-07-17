@@ -1,0 +1,11 @@
+apple
+banana
+apple
+orange
+banana
+banana
+kiwi
+kiwi
+kiwi
+apple
+orange
