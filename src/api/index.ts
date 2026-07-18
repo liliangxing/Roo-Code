@@ -132,7 +132,9 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 				? new AnthropicVertexHandler(options)
 				: new VertexHandler(options)
 		case "openai":
-			return new OpenAiHandler(options)
+			return new OpenAiHandler({ ...options, apiProvider })
+		case "openai-compatible":
+			return new OpenAiHandler({ ...options, apiProvider })
 		case "ollama":
 			return new NativeOllamaHandler(options)
 		case "lmstudio":

@@ -79,6 +79,44 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		}
 	}
 
+	/**
+	 * Only OpenAI's own API (and the dedicated `openai` provider) supports strict
+	 * tool-calling mode. The generic `openai-compatible` provider is a catch-all for
+	 * arbitrary OpenAI-compatible endpoints (Zhipu/glm, DeepSeek, local models, …)
+	 * that typically reject `strict: true`, so we disable it specifically for that
+	 * provider and leave every other provider's behavior untouched.
+	 */
+	protected override supportsStrictTools(): boolean {
+		return this.options.apiProvider !== "openai-compatible"
+	}
+
+	/**
+	 * Only OpenAI's own API reliably accepts array `content`. The generic
+	 * `openai-compatible` provider may point at endpoints that only accept a plain
+	 * string and silently return a non-tool "message got cut off" response when given
+	 * an array, so we flatten text-only content arrays specifically for that provider.
+	 */
+	protected override supportsContentArray(): boolean {
+		return this.options.apiProvider !== "openai-compatible"
+	}
+
+	/**
+	 * Flattens message `content` arrays into a single string when the provider
+	 * does not support array content. Only text-only arrays are flattened;
+	 * arrays containing images are left untouched (the model needs the parts).
+	 */
+	private flattenContentArrays(messages: any[]): any[] {
+		if (this.supportsContentArray()) {
+			return messages
+		}
+		return messages.map((msg) => {
+			if (msg && Array.isArray(msg.content) && msg.content.every((p: any) => p && p.type === "text")) {
+				return { ...msg, content: msg.content.map((p: any) => p.text).join("\n\n") }
+			}
+			return msg
+		})
+	}
+
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
@@ -149,6 +187,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					})
 				}
 			}
+
+			// OpenAI-compatible endpoints that don't accept array content: flatten
+			// text-only content arrays into a single string (glm-4-flash etc.).
+			convertedMessages = this.flattenContentArrays(convertedMessages)
 
 			const isGrokXAI = this._isGrokXAI(this.options.openAiBaseUrl)
 
@@ -221,11 +263,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				yield this.processUsageMetrics(lastUsage, modelInfo)
 			}
 		} else {
+			const requestMessages = deepseekReasoner
+				? convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
+				: [systemMessage, ...convertToOpenAiMessages(messages)]
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: modelId,
-				messages: deepseekReasoner
-					? convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
-					: [systemMessage, ...convertToOpenAiMessages(messages)],
+				messages: this.flattenContentArrays(requestMessages),
 				// Tools are always present (minimum ALWAYS_AVAILABLE_TOOLS)
 				tools: this.convertToolsForOpenAI(metadata?.tools),
 				tool_choice: metadata?.tool_choice,

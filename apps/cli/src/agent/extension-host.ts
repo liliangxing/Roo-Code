@@ -71,6 +71,8 @@ export interface ExtensionHostOptions {
 	provider: SupportedProvider
 	apiKey?: string
 	model: string
+	/** Base URL for OpenAI-compatible providers (e.g. Zhipu). */
+	baseUrl?: string
 	workspacePath: string
 	extensionPath: string
 	nonInteractive?: boolean
@@ -227,7 +229,12 @@ export class ExtensionHost extends EventEmitter implements ExtensionHostInterfac
 			experiments: {
 				customTools: true,
 			},
-			...getProviderSettings(this.options.provider, this.options.apiKey, this.options.model),
+			...getProviderSettings(
+				this.options.provider,
+				this.options.apiKey,
+				this.options.model,
+				this.options.baseUrl,
+			),
 		}
 
 		this.initialSettings = this.options.nonInteractive

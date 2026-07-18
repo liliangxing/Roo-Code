@@ -12,6 +12,13 @@ import {
 // Extend ProviderSettings (minus apiProvider) with handler-specific toggles.
 export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider"> & {
 	/**
+	 * The provider name this handler was built for. Optional here (handlers are
+	 * normally constructed from a ProviderSettings without it), but `buildApiHandler`
+	 * threads it through so handlers like OpenAiHandler can special-case the generic
+	 * `openai-compatible` provider (e.g. disable strict tool mode / array content).
+	 */
+	apiProvider?: ProviderSettings["apiProvider"]
+	/**
 	 * When true and using OpenAI Responses API models that support reasoning summaries,
 	 * include reasoning.summary: "auto" so the API returns summaries (we already parse
 	 * and surface them). Defaults to true; set to false to disable summaries.

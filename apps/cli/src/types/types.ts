@@ -7,6 +7,7 @@ export const supportedProviders = [
 	"gemini",
 	"openrouter",
 	"vercel-ai-gateway",
+	"openai-compatible",
 ] as const satisfies ProviderName[]
 
 export type SupportedProvider = (typeof supportedProviders)[number]
@@ -33,6 +34,8 @@ export type FlagOptions = {
 	apiKey?: string
 	provider?: SupportedProvider
 	model?: string
+	/** Base URL for OpenAI-compatible providers (e.g. Zhipu https://open.bigmodel.cn/api/paas/v4/) */
+	baseUrl?: string
 	mode?: string
 	terminalShell?: string
 	reasoningEffort?: ReasoningEffortFlagOptions

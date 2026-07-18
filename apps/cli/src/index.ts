@@ -36,6 +36,10 @@ program
 	.option("-a, --require-approval", "Require manual approval for actions", false)
 	.option("-k, --api-key <key>", "API key for the LLM provider")
 	.option("--provider <provider>", "API provider (anthropic, openai, openrouter, etc.)")
+	.option(
+		"--base-url <url>",
+		"Base URL for OpenAI-compatible providers (e.g. Zhipu https://open.bigmodel.cn/api/paas/v4/)",
+	)
 	.option("-m, --model <model>", "Model to use", DEFAULT_FLAGS.model)
 	.option("--mode <mode>", "Mode to start in (code, architect, ask, debug, etc.)", DEFAULT_FLAGS.mode)
 	.option("--terminal-shell <path>", "Absolute path to shell executable for inline terminal commands")

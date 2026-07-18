@@ -8,7 +8,11 @@ const envVarMap: Record<SupportedProvider, string> = {
 	gemini: "GOOGLE_API_KEY",
 	openrouter: "OPENROUTER_API_KEY",
 	"vercel-ai-gateway": "VERCEL_AI_GATEWAY_API_KEY",
+	"openai-compatible": "OPENAI_COMPATIBLE_API_KEY",
 }
+
+/** Base URL env var for OpenAI-compatible providers (e.g. Zhipu). */
+const baseUrlEnvVar = "OPENAI_COMPATIBLE_BASE_URL"
 
 export function getEnvVarName(provider: SupportedProvider): string {
 	return envVarMap[provider]
@@ -23,8 +27,12 @@ export function getProviderSettings(
 	provider: SupportedProvider,
 	apiKey: string | undefined,
 	model: string | undefined,
+	baseUrl?: string,
 ): RooCodeSettings {
 	const config: RooCodeSettings = { apiProvider: provider }
+
+	// Resolve base URL for openai-compatible from arg > env.
+	const effectiveBaseUrl = baseUrl || (provider === "openai-compatible" ? process.env[baseUrlEnvVar] : undefined)
 
 	switch (provider) {
 		case "anthropic":
@@ -46,6 +54,12 @@ export function getProviderSettings(
 		case "vercel-ai-gateway":
 			if (apiKey) config.vercelAiGatewayApiKey = apiKey
 			if (model) config.vercelAiGatewayModelId = model
+			break
+		case "openai-compatible":
+			config.apiProvider = "openai-compatible"
+			if (apiKey) config.openAiApiKey = apiKey
+			if (effectiveBaseUrl) config.openAiBaseUrl = effectiveBaseUrl
+			if (model) config.openAiModelId = model
 			break
 		default:
 			if (apiKey) config.apiKey = apiKey

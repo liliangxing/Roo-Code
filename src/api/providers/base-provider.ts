@@ -24,10 +24,34 @@ export abstract class BaseProvider implements ApiHandler {
 	 * Filters for function tools, applies schema conversion to their parameters,
 	 * and ensures all tools have consistent strict: true values.
 	 */
+	/**
+	 * Whether this provider supports OpenAI's strict tool-calling mode.
+	 * Only OpenAI's own API is guaranteed to support it; many OpenAI-compatible
+	 * endpoints (e.g. Zhipu/glm, DeepSeek) reject `strict: true` and fall back to
+	 * a non-tool response. Subclasses should override this when needed.
+	 */
+	protected supportsStrictTools(): boolean {
+		return true
+	}
+
+	/**
+	 * Whether this provider's chat-completions endpoint accepts message `content`
+	 * as an array of typed parts (e.g. `[{ type: "text", text: "..." }]`).
+	 * OpenAI's own API does, but many OpenAI-compatible endpoints (Zhipu/glm,
+	 * DeepSeek, etc.) only accept a plain string and silently return a
+	 * "message got cut off" non-tool response when given an array. Subclasses
+	 * should override this when needed.
+	 */
+	protected supportsContentArray(): boolean {
+		return true
+	}
+
 	protected convertToolsForOpenAI(tools: any[] | undefined): any[] | undefined {
 		if (!tools) {
 			return undefined
 		}
+
+		const supportsStrict = this.supportsStrictTools()
 
 		return tools.map((tool) => {
 			if (tool.type !== "function") {
@@ -37,6 +61,20 @@ export abstract class BaseProvider implements ApiHandler {
 			// MCP tools use the 'mcp--' prefix - disable strict mode for them
 			// to preserve optional parameters from the MCP server schema
 			const isMcp = isMcpTool(tool.function.name)
+
+			// OpenAI-compatible providers that don't support strict mode: strip the
+			// strict flag but still normalize the schema (fix nullable types, complete
+			// the required array) so the model can call the tool successfully.
+			if (!supportsStrict) {
+				return {
+					...tool,
+					function: {
+						...tool.function,
+						strict: false,
+						parameters: this.convertToolSchemaForOpenAI(tool.function.parameters),
+					},
+				}
+			}
 
 			return {
 				...tool,
