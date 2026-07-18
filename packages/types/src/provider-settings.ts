@@ -113,6 +113,7 @@ export const providerNames = [
 	"moonshot",
 	"minimax",
 	"openai-codex",
+	"openai-compatible",
 	"openai-native",
 	"qwen-code",
 	"sambanova",
@@ -501,6 +502,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	bedrock: "apiModelId",
 	vertex: "apiModelId",
 	"openai-codex": "apiModelId",
+	"openai-compatible": "openAiModelId",
 	"openai-native": "openAiModelId",
 	ollama: "ollamaModelId",
 	lmstudio: "lmStudioModelId",
@@ -632,6 +634,7 @@ export const MODELS_BY_PROVIDER: Record<
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },
+	"openai-compatible": { id: "openai-compatible", label: "OpenAI Compatible", models: [] },
 
 	// Local providers; models discovered from localhost endpoints.
 	lmstudio: { id: "lmstudio", label: "LM Studio", models: [] },
