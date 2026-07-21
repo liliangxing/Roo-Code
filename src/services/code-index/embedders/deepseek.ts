@@ -8,7 +8,7 @@ import {
 } from "../constants"
 import { getDefaultModelId, getModelQueryPrefix } from "../../../shared/embeddingModels"
 import { t } from "../../../i18n"
-import { withValidationErrorHandling, HttpError, formatEmbeddingError } from "../shared/validation-helpers"
+import { withValidationErrorHandling, formatEmbeddingError } from "../shared/validation-helpers"
 import { Mutex } from "async-mutex"
 import { handleOpenAIError } from "../../../api/providers/utils/openai-error-handler"
 
@@ -270,10 +270,7 @@ export class DeepSeekEmbedder implements IEmbedder {
 	 * Handles and formats errors
 	 */
 	private handleError(error: any): Error {
-		if (error instanceof HttpError) {
-			return formatEmbeddingError(error, "DeepSeek")
-		}
-		return handleOpenAIError(error, "DeepSeek")
+		return formatEmbeddingError(error, "DeepSeek")
 	}
 
 	/**
