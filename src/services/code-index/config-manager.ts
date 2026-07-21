@@ -22,6 +22,7 @@ export class CodeIndexConfigManager {
 	private vercelAiGatewayOptions?: { apiKey: string }
 	private bedrockOptions?: { region: string; profile?: string }
 	private openRouterOptions?: { apiKey: string; specificProvider?: string }
+	deepseekOptions?: { apiKey: string }
 	private qdrantUrl?: string = "http://localhost:6333"
 	private qdrantApiKey?: string
 	private searchMinScore?: number
@@ -75,6 +76,7 @@ export class CodeIndexConfigManager {
 		const geminiApiKey = this.contextProxy?.getSecret("codebaseIndexGeminiApiKey") ?? ""
 		const mistralApiKey = this.contextProxy?.getSecret("codebaseIndexMistralApiKey") ?? ""
 		const vercelAiGatewayApiKey = this.contextProxy?.getSecret("codebaseIndexVercelAiGatewayApiKey") ?? ""
+		const deepSeekApiKey = this.contextProxy?.getSecret("codebaseIndexDeepSeekApiKey") ?? ""
 		const bedrockRegion = codebaseIndexConfig.codebaseIndexBedrockRegion ?? "us-east-1"
 		const bedrockProfile = codebaseIndexConfig.codebaseIndexBedrockProfile ?? ""
 		const openRouterApiKey = this.contextProxy?.getSecret("codebaseIndexOpenRouterApiKey") ?? ""
@@ -148,6 +150,8 @@ export class CodeIndexConfigManager {
 		this.bedrockOptions = bedrockRegion
 			? { region: bedrockRegion, profile: bedrockProfile || undefined }
 			: undefined
+
+		this.deepseekOptions = deepSeekApiKey ? { apiKey: deepSeekApiKey } : undefined
 	}
 
 	/**
