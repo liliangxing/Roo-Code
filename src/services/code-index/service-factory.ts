@@ -77,7 +77,7 @@ export class CodeIndexServiceFactory {
 				throw new Error("DeepSeek API key is required for codebase indexing. Please set it in settings.")
 			}
 			return new DeepSeekEmbedder(
-			.deepSeekApiKey,
+			deepSeekApiKey,
 				config.modelId,
 			)
 		} else if (provider === "gemini") {
