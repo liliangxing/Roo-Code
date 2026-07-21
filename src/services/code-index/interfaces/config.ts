@@ -17,6 +17,7 @@ export interface CodeIndexConfig {
 	vercelAiGatewayOptions?: { apiKey: string }
 	bedrockOptions?: { region: string; profile?: string }
 	openRouterOptions?: { apiKey: string; specificProvider?: string }
+	deepseekOptions?: { apiKey: string }
 	qdrantUrl?: string
 	qdrantApiKey?: string
 	searchMinScore?: number
