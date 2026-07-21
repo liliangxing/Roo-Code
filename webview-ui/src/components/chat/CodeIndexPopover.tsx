@@ -743,7 +743,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												<SelectItem value="ollama">
 													{t("settings:codeIndex.ollamaProvider")}
 												</SelectItem>
-												<SelectItem value="openai-compatible">
+												<SelectItem value="deepseek">DeepSeek</SelectItem>
+<SelectItem value="openai-compatible">
 													{t("settings:codeIndex.openaiCompatibleProvider")}
 												</SelectItem>
 												<SelectItem value="gemini">
@@ -1023,7 +1024,86 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 										</>
 									)}
 
-									{currentSettings.codebaseIndexEmbedderProvider === "gemini" && (
+									
+									{currentSettings.codebaseIndexEmbedderProvider === "deepseek" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{"DeepSeek API Key"}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexDeepSeekApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexDeepSeekApiKey",
+															e.target.value,
+														)
+													}
+													placeholder={"Enter your DeepSeek API key"}
+													className={cn("w-full", {
+														"border-red-500":
+															formErrors.codebaseIndexDeepSeekApiKey,
+													})}
+												/>
+												{formErrors.codebaseIndexDeepSeekApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexDeepSeekApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{"Embedding Model"}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexEmbedderModelId || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													placeholder={"Model ID (optional)"}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}
+												/>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{"Embedding Dimension"}
+												</label>
+												<VSCodeTextField
+													value={
+														currentSettings.codebaseIndexEmbedderModelDimension?.toString() ||
+														""
+													}
+													onInput={(e: any) => {
+														const value = e.target.value
+															? parseInt(e.target.value, 10) || undefined
+															: undefined
+														updateSetting("codebaseIndexEmbedderModelDimension", value)
+													}}
+													placeholder={"e.g., 1536"}
+													className={cn("w-full", {
+														"border-red-500":
+															formErrors.codebaseIndexEmbedderModelDimension,
+													})}
+												/>
+												{formErrors.codebaseIndexEmbedderModelDimension && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelDimension}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+{currentSettings.codebaseIndexEmbedderProvider === "gemini" && (
 										<>
 											<div className="space-y-2">
 												<label className="text-sm font-medium">
