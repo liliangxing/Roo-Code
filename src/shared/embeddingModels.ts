@@ -72,6 +72,10 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 		"cohere.embed-english-v3": { dimension: 1024, scoreThreshold: 0.4 },
 		"cohere.embed-multilingual-v3": { dimension: 1024, scoreThreshold: 0.4 },
 	},
+	deepseek: {
+		"deepseek-embedding-small": { dimension: 1536, scoreThreshold: 0.4 },
+		"deepseek-embedding-large": { dimension: 3072, scoreThreshold: 0.4 },
+	},
 	openrouter: {
 		// OpenAI models via OpenRouter
 		"openai/text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
@@ -182,6 +186,8 @@ export function getDefaultModelId(provider: EmbedderProvider): string {
 
 		case "bedrock":
 			return "amazon.titan-embed-text-v2:0"
+		case "deepseek":
+			return "deepseek-embedding-small"
 		case "openrouter":
 			return "openai/text-embedding-3-large"
 
