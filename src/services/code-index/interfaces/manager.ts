@@ -79,6 +79,7 @@ export type EmbedderProvider =
 	| "openai"
 	| "ollama"
 	| "openai-compatible"
+	| "deepseek"
 	| "gemini"
 	| "mistral"
 	| "vercel-ai-gateway"
