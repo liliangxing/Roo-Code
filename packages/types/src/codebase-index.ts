@@ -26,6 +26,7 @@ export const codebaseIndexConfigSchema = z.object({
 			"openai",
 			"ollama",
 			"openai-compatible",
+			"deepseek",
 			"gemini",
 			"mistral",
 			"vercel-ai-gateway",
@@ -45,6 +46,9 @@ export const codebaseIndexConfigSchema = z.object({
 	// OpenAI Compatible specific fields
 	codebaseIndexOpenAiCompatibleBaseUrl: z.string().optional(),
 	codebaseIndexOpenAiCompatibleModelDimension: z.number().optional(),
+	// DeepSeek specific fields
+	codebaseIndexDeepSeekApiKey: z.string().optional(),
+	codebaseIndexDeepSeekModelDimension: z.number().optional(),
 	// Bedrock specific fields
 	codebaseIndexBedrockRegion: z.string().optional(),
 	codebaseIndexBedrockProfile: z.string().optional(),
@@ -62,6 +66,7 @@ export const codebaseIndexModelsSchema = z.object({
 	openai: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	ollama: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	"openai-compatible": z.record(z.string(), z.object({ dimension: z.number() })).optional(),
+	deepseek: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	gemini: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	mistral: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	"vercel-ai-gateway": z.record(z.string(), z.object({ dimension: z.number() })).optional(),
@@ -81,6 +86,8 @@ export const codebaseIndexProviderSchema = z.object({
 	codebaseIndexOpenAiCompatibleBaseUrl: z.string().optional(),
 	codebaseIndexOpenAiCompatibleApiKey: z.string().optional(),
 	codebaseIndexOpenAiCompatibleModelDimension: z.number().optional(),
+	codebaseIndexDeepSeekApiKey: z.string().optional(),
+	codebaseIndexDeepSeekModelDimension: z.number().optional(),
 	codebaseIndexGeminiApiKey: z.string().optional(),
 	codebaseIndexMistralApiKey: z.string().optional(),
 	codebaseIndexVercelAiGatewayApiKey: z.string().optional(),
