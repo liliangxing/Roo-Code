@@ -460,6 +460,7 @@ export class CodeIndexConfigManager {
 			vercelAiGatewayOptions: this.vercelAiGatewayOptions,
 			bedrockOptions: this.bedrockOptions,
 			openRouterOptions: this.openRouterOptions,
+			deepseekOptions: this.deepseekOptions,
 			qdrantUrl: this.qdrantUrl,
 			qdrantApiKey: this.qdrantApiKey,
 			searchMinScore: this.currentSearchMinScore,
