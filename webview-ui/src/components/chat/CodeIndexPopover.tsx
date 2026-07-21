@@ -81,6 +81,7 @@ interface LocalCodeIndexSettings {
 	codebaseIndexVercelAiGatewayApiKey?: string
 	codebaseIndexOpenRouterApiKey?: string
 	codebaseIndexOpenRouterSpecificProvider?: string
+	codebaseIndexDeepSeekApiKey?: string
 }
 
 // Validation schema for codebase index settings
@@ -176,6 +177,16 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
 			})
 
+		case "deepseek":
+			return baseSchema.extend({
+				codebaseIndexDeepSeekApiKey: z
+					.string()
+					.min(1, 'DeepSeek API key is required'),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, 'Model selection is required'),
+			})
+
 		default:
 			return baseSchema
 	}
@@ -225,6 +236,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexVercelAiGatewayApiKey: "",
 		codebaseIndexOpenRouterApiKey: "",
 		codebaseIndexOpenRouterSpecificProvider: "",
+		codebaseIndexDeepSeekApiKey: "",
 	})
 
 	// Initial settings state - stores the settings when popover opens
