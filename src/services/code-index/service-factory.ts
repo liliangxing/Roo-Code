@@ -18,6 +18,7 @@ import { MistralEmbedder } from "./embedders/mistral"
 import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { BedrockEmbedder } from "./embedders/bedrock"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
+import { DeepSeekEmbedder } from "./embedders/deepseek"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
@@ -68,6 +69,15 @@ export class CodeIndexServiceFactory {
 			return new OpenAICompatibleEmbedder(
 				config.openAiCompatibleOptions.baseUrl,
 				config.openAiCompatibleOptions.apiKey,
+				config.modelId,
+			)
+		} else if (provider === "deepseek") {
+			const deepSeekApiKey = this.configManager.getConfig().deepseekOptions?.apiKey
+			if (!deepSeekApiKey) {
+				throw new Error("DeepSeek API key is required for codebase indexing. Please set it in settings.")
+			}
+			return new DeepSeekEmbedder(
+			.deepSeekApiKey,
 				config.modelId,
 			)
 		} else if (provider === "gemini") {
